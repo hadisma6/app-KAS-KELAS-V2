@@ -1,0 +1,1981 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="description"
+        content="Aplikasi Rekap Kas Keuangan Siswa Kelas - PWA Offline First dengan Integrasi Google Apps Script & AppSheet">
+    <title>KasKelas - Rekap Keuangan Kelas PWA</title>
+
+    <!-- PWA Web App Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="KasKelas">
+
+    <!-- Favicon and Apple Device Icons -->
+    <link rel="icon" type="image/svg+xml" href="/icon.svg">
+    <link rel="apple-touch-icon" href="/icon.svg">
+
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+
+            .print-only {
+                display: block !important;
+            }
+
+            body {
+                background: white;
+                font-size: 12pt;
+            }
+
+            .print-container {
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                border: none;
+                box-shadow: none;
+            }
+        }
+
+        .print-only {
+            display: none;
+        }
+    </style>
+</head>
+
+<body class="text-slate-800 antialiased min-h-screen flex flex-col justify-between">
+
+    <!-- APP HEADER -->
+    <header class="bg-brand-600 text-white shadow-lg sticky top-0 z-40 no-print">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white/20 p-1 rounded-xl flex items-center justify-center shadow-xs">
+                    <img src="/icon.svg" alt="H2i Logo" class="w-7 h-7 object-contain rounded-lg">
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight" id="headerAppTitle">Kas Keuangan Kelas</h1>
+                    <p class="text-xs text-brand-100" id="headerSubTitle">Data Lokal</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button onclick="triggerPwaInstall()" id="btnInstallHeader"
+                    class="p-2 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded-lg transition-all text-xs font-bold flex items-center gap-1.5 shadow-sm"
+                    title="Install Aplikasi KasKelas ke Layar Utama HP">
+                    <i data-lucide="smartphone" class="w-4 h-4 text-slate-900"></i>
+                    <span class="hidden sm:inline">Install App</span>
+                </button>
+                <button onclick="pullDataFromBackend()" id="pullBtn"
+                    class="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-all text-xs flex items-center gap-1.5"
+                    title="Tarik Data dari Cloud Database">
+                    <i data-lucide="cloud-download" class="w-4 h-4" id="pullIcon"></i>
+                    <span class="hidden md:inline">Tarik Data</span>
+                </button>
+                <button onclick="syncDataToBackend()" id="syncBtn"
+                    class="p-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-all text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+                    title="Sinkronisasi ke Database Cloud">
+                    <i data-lucide="refresh-cw" class="w-4 h-4" id="syncIcon"></i>
+                    <span class="hidden sm:inline" id="syncStatusText">Sync ke Database</span>
+                </button>
+                <button onclick="showSection('settings')"
+                    class="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-all" title="Pengaturan">
+                    <i data-lucide="settings" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- PWA SMART INSTALL BANNER (OFFLINE FIRST / A2HS) -->
+    <div id="pwaInstallBanner" class="max-w-5xl mx-auto px-4 pt-4 no-print">
+        <div class="bg-gradient-to-r from-brand-600 to-indigo-700 text-white p-4 rounded-2xl shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="bg-white/20 p-2.5 rounded-xl backdrop-blur-xs flex items-center justify-center shrink-0">
+                    <i data-lucide="sparkles" class="w-6 h-6 text-amber-300"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-sm flex items-center gap-2">
+                        Install Aplikasi Kas di Layar Utama HP (PWA)
+                        <span class="bg-amber-400 text-slate-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full">Offline Ready</span>
+                    </h3>
+                    <p class="text-xs text-brand-100 mt-0.5">Bisa dibuka langsung seperti aplikasi HP resmi tanpa buka browser & bisa digunakan saat tanpa kuota/internet.</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                <button onclick="triggerPwaInstall()" class="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm">
+                    <i data-lucide="download" class="w-4 h-4"></i> Pasang di HP
+                </button>
+                <button onclick="showSection('guide')" class="px-3 py-2 bg-white/20 hover:bg-white/30 text-white font-medium rounded-xl text-xs transition-all">
+                    Panduan
+                </button>
+                <button onclick="dismissInstallBanner()" class="p-2 text-brand-200 hover:text-white rounded-lg" title="Tutup Banner">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="max-w-5xl mx-auto px-4 py-5 w-full flex-grow">
+
+        <!-- DASHBOARD SUMMARY CARDS -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 no-print">
+            <div class="glass-card p-5 rounded-2xl shadow-sm border-l-4 border-emerald-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Pemasukan</p>
+                        <h3 class="text-2xl font-bold text-emerald-600 mt-1" id="statTotalMasuk">Rp 0</h3>
+                    </div>
+                    <div class="bg-emerald-50 p-2.5 rounded-xl text-emerald-600">
+                        <i data-lucide="arrow-down-left" class="w-5 h-5"></i>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-400 mt-2" id="statTargetInfo">Kas Siswa: Rp 0 | Pengembalian: Rp 0</p>
+            </div>
+
+            <div class="glass-card p-5 rounded-2xl shadow-sm border-l-4 border-rose-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Pengeluaran</p>
+                        <h3 class="text-2xl font-bold text-rose-600 mt-1" id="statTotalKeluar">Rp 0</h3>
+                    </div>
+                    <div class="bg-rose-50 p-2.5 rounded-xl text-rose-600">
+                        <i data-lucide="arrow-up-right" class="w-5 h-5"></i>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-400 mt-2" id="statJumlahPengeluaran">0 Transaksi Pengeluaran</p>
+            </div>
+
+            <div class="glass-card p-5 rounded-2xl shadow-sm border-l-4 border-brand-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Saldo Kas Sisa</p>
+                        <h3 class="text-2xl font-bold text-brand-600 mt-1" id="statSaldoSisa">Rp 0</h3>
+                    </div>
+                    <div class="bg-brand-50 p-2.5 rounded-xl text-brand-600">
+                        <i data-lucide="coins" class="w-5 h-5"></i>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-400 mt-2" id="statSiswaLunasCount">0 / 0 Siswa Lunas Minggu Ini</p>
+            </div>
+        </div>
+
+        <!-- WIDGET KHUSUS PELACAKAN DANA TALANGAN (LKPD & PIUTANG SISWA) -->
+        <div class="glass-card p-4 rounded-2xl shadow-sm border border-amber-200 bg-amber-50/40 mb-6 no-print">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-amber-100 text-amber-700 rounded-xl">
+                        <i data-lucide="book-open-check" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
+                            Status Pelacakan Dana Talangan (LKPD / Buku / Lainnya)
+                            <span class="text-[10px] font-semibold bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded-full">Otomatis Terlacak</span>
+                        </h4>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Memantau dana kas yang ditalangi untuk siswa dan pengembalian cicilan yang sudah masuk.</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 bg-white/90 px-4 py-2 rounded-xl border border-amber-100 shadow-xs text-xs">
+                    <div>
+                        <span class="text-slate-400 block text-[10px]">Talangan Keluar</span>
+                        <strong class="text-slate-700 font-bold" id="statTalKeluar">Rp 0</strong>
+                    </div>
+                    <div class="border-l border-slate-200 pl-3">
+                        <span class="text-slate-400 block text-[10px]">Sudah Dikembalikan</span>
+                        <strong class="text-emerald-600 font-bold" id="statTalKembali">Rp 0</strong>
+                    </div>
+                    <div class="border-l border-slate-200 pl-3">
+                        <span class="text-slate-400 block text-[10px]">Sisa Belum Lunas</span>
+                        <strong class="text-rose-600 font-bold text-sm" id="statTalSisa">Rp 0</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NAVIGATION TABS -->
+        <div class="flex bg-slate-200/80 p-1 rounded-xl mb-6 no-print text-xs sm:text-sm font-medium overflow-x-auto">
+            <button onclick="showSection('input-kas')" id="tab-input-kas"
+                class="flex-1 py-2.5 px-2 sm:px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 sm:gap-2 bg-white text-brand-600 shadow-sm whitespace-nowrap">
+                <i data-lucide="calendar-check" class="w-4 h-4"></i>
+                <span>Input Harian</span>
+            </button>
+            <button onclick="showSection('pengeluaran')" id="tab-pengeluaran"
+                class="flex-1 py-2.5 px-2 sm:px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-slate-600 hover:text-slate-900 whitespace-nowrap">
+                <i data-lucide="receipt" class="w-4 h-4"></i>
+                <span>Pengeluaran</span>
+            </button>
+            <button onclick="showSection('rekap')" id="tab-rekap"
+                class="flex-1 py-2.5 px-2 sm:px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-slate-600 hover:text-slate-900 whitespace-nowrap">
+                <i data-lucide="pie-chart" class="w-4 h-4"></i>
+                <span>Rekapitulasi</span>
+            </button>
+            <button onclick="showSection('guide')" id="tab-guide"
+                class="flex-1 py-2.5 px-2 sm:px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-slate-600 hover:text-slate-900 whitespace-nowrap">
+                <i data-lucide="book-open" class="w-4 h-4 text-amber-600"></i>
+                <span>Panduan Lengkap</span>
+            </button>
+            <button onclick="showSection('settings')" id="tab-settings"
+                class="flex-1 py-2.5 px-2 sm:px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-slate-600 hover:text-slate-900 whitespace-nowrap">
+                <i data-lucide="database" class="w-4 h-4"></i>
+                <span>Pengaturan</span>
+            </button>
+        </div>
+
+        <!-- SECTION 1: INPUT KAS HARIAN -->
+        <section id="sec-input-kas" class="space-y-4">
+            <div class="glass-card p-5 rounded-2xl shadow-sm">
+                <div
+                    class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i data-lucide="edit-3" class="w-5 h-5 text-brand-600"></i>
+                            Input Kas Mingguan (Senin - Jumat)
+                        </h2>
+                        <p class="text-xs text-slate-500">Data tersimpan otomatis di perangkat secara offline.</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="relative">
+                            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5"></i>
+                            <input type="text" id="searchStudentInput" oninput="renderKasTable()"
+                                placeholder="Cari nama siswa..."
+                                class="bg-slate-50 border border-slate-300 rounded-lg pl-8 pr-3 py-1.5 text-xs focus:ring-2 focus:ring-brand-500 outline-none w-40 sm:w-48">
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <label class="text-xs font-semibold text-slate-600 whitespace-nowrap">Minggu:</label>
+                            <input type="week" id="inputWeekPicker" onchange="renderKasTable()"
+                                class="bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-medium focus:ring-2 focus:ring-brand-500 outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto mt-4">
+                    <table class="w-full text-sm text-left text-slate-600">
+                        <thead class="text-xs text-slate-700 uppercase bg-slate-100/70 rounded-lg">
+                            <tr>
+                                <th class="py-3 px-3 rounded-l-lg">No</th>
+                                <th class="py-3 px-3">Nama Siswa</th>
+                                <th class="py-3 px-2 text-center">Sen</th>
+                                <th class="py-3 px-2 text-center">Sel</th>
+                                <th class="py-3 px-2 text-center">Rab</th>
+                                <th class="py-3 px-2 text-center">Kam</th>
+                                <th class="py-3 px-2 text-center">Jum</th>
+                                <th class="py-3 px-3 text-right">Total Wk</th>
+                                <th class="py-3 px-3 text-center rounded-r-lg">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="kasTableBody" class="divide-y divide-slate-100">
+                            <!-- Dynamic Content -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-4 flex justify-end">
+                    <button onclick="saveKasManual()" class="bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 px-5 rounded-lg text-sm flex items-center gap-2 shadow-sm transition-all">
+                        <i data-lucide="save" class="w-4 h-4"></i> Simpan Data Kas (Lokal)
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: PENGELUARAN & TALANGAN -->
+        <section id="sec-pengeluaran" class="space-y-4 hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- FORM PENCATATAN -->
+                <div class="glass-card p-5 rounded-2xl shadow-sm lg:col-span-1">
+                    <h2 class="text-md font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <i data-lucide="plus-circle" class="w-5 h-5 text-rose-600" id="expFormIcon"></i>
+                        <span id="expFormTitle">Catat Transaksi Kas</span>
+                    </h2>
+                    <form id="expenseForm" onsubmit="saveExpense(event)" class="space-y-3.5">
+                        <input type="hidden" id="expEditId" value="">
+                        
+                        <!-- PILIH JENIS / TIPE TRANSAKSI -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Jenis Transaksi</label>
+                            <select id="expType" onchange="handleTypeChange()"
+                                class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs font-semibold focus:ring-2 focus:ring-brand-500 outline-none">
+                                <option value="expense">🔴 Pengeluaran Belanja / Beban Operasional</option>
+                                <option value="talangan">🟡 Dana Talangan Kelas (LKPD / Buku / Lainnya)</option>
+                                <option value="reimburse">🟢 Pengembalian Talangan / Pemasukan Lainnya</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal</label>
+                            <input type="date" id="expDate" required
+                                class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-brand-500 outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Kategori Transaksi</label>
+                            <select id="expCategory"
+                                class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-brand-500 outline-none">
+                                <option value="Kebersihan & Alat Kelas">Kebersihan & Alat Kelas</option>
+                                <option value="Fotokopi & Modul">Fotokopi & Modul</option>
+                                <option value="Konsumsi & Acara">Konsumsi & Acara</option>
+                                <option value="Sosial & Sakit">Sosial & Sakit</option>
+                                <option value="Perlengkapan Lomba">Perlengkapan Lomba</option>
+                                <option value="Lain-lain">Lain-lain</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Nominal (Rp)</label>
+                            <input type="number" id="expAmount" min="500" step="100" required placeholder="Contoh: 100000"
+                                class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-brand-500 outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1" id="expNoteLabel">Keterangan / Keperluan</label>
+                            <textarea id="expNote" rows="2.5" required placeholder="Contoh: Talangan LKPD Sejarah untuk 20 siswa"
+                                class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-brand-500 outline-none"></textarea>
+                        </div>
+
+                        <div class="flex gap-2 pt-1">
+                            <button type="submit" id="expSubmitBtn"
+                                class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2.5 rounded-lg transition-all text-xs flex items-center justify-center gap-1.5 shadow-xs">
+                                <i data-lucide="save" class="w-4 h-4"></i> Simpan Transaksi
+                            </button>
+                            <button type="button" id="expCancelBtn" onclick="resetExpenseForm()"
+                                class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2.5 px-3 rounded-lg text-xs">
+                                Batal
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- RIWAYAT TRANSAKSI & DAFTAR STATUS TALANGAN -->
+                <div class="glass-card p-5 rounded-2xl shadow-sm lg:col-span-2 space-y-4">
+                    <!-- FILTER TIPE & PENCARIAN -->
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-md font-bold text-slate-800 flex items-center gap-2">
+                                <i data-lucide="history" class="w-5 h-5 text-slate-600"></i>
+                                Riwayat Transaksi & Talangan
+                            </h2>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <select id="filterExpType" onchange="renderExpenses()"
+                                class="bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-brand-500 outline-none">
+                                <option value="all">Semua Tipe</option>
+                                <option value="expense">🔴 Belanja</option>
+                                <option value="talangan">🟡 Dana Talangan</option>
+                                <option value="reimburse">🟢 Pengembalian</option>
+                            </select>
+                            <div class="relative">
+                                <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i>
+                                <input type="text" id="searchExpenseInput" oninput="renderExpenses()"
+                                    placeholder="Cari transaksi..."
+                                    class="bg-slate-50 border border-slate-300 rounded-lg pl-8 pr-3 py-1.5 text-xs focus:ring-2 focus:ring-brand-500 outline-none w-32 sm:w-40">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TABEL RIWAYAT LENGKAP -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs text-left text-slate-600">
+                            <thead class="text-[11px] text-slate-700 uppercase bg-slate-100/70">
+                                <tr>
+                                    <th class="py-2.5 px-3 rounded-l-lg">Tgl</th>
+                                    <th class="py-2.5 px-3">Tipe / Kategori</th>
+                                    <th class="py-2.5 px-3">Keterangan</th>
+                                    <th class="py-2.5 px-3 text-right">Nominal</th>
+                                    <th class="py-2.5 px-3 text-center rounded-r-lg">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expenseTableBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: REKAPITULASI -->
+        <section id="sec-rekap" class="space-y-4 hidden">
+            <div class="glass-card p-5 rounded-2xl shadow-sm no-print">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i data-lucide="printer" class="w-5 h-5 text-brand-600"></i> Cetak & Export Laporan
+                        </h2>
+                        <p class="text-xs text-slate-500">Unduh laporan resmi keuangan kelas dalam format PDF atau CSV.
+                        </p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="window.print()"
+                            class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-4 py-2.5 rounded-lg flex items-center gap-1.5 shadow-sm">
+                            <i data-lucide="printer" class="w-4 h-4"></i> Print / PDF
+                        </button>
+                        <button onclick="exportCSV()"
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2.5 rounded-lg flex items-center gap-1.5 shadow-sm">
+                            <i data-lucide="download" class="w-4 h-4"></i> Ekspor CSV
+                        </button>
+                        <button onclick="exportJSONBackup()"
+                            class="bg-slate-700 hover:bg-slate-800 text-white text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-1.5 shadow-sm"
+                            title="Backup Objek JSON">
+                            <i data-lucide="file-json" class="w-4 h-4"></i> Backup JSON
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PRINT TEMPLATE -->
+            <div id="printReportArea" class="glass-card p-8 rounded-2xl shadow-sm bg-white print-container">
+                <div class="border-b-2 border-slate-800 pb-4 mb-6 text-center">
+                    <h2 class="text-xl font-bold uppercase text-slate-900 tracking-wide" id="reportSchoolName">NAMA
+                        SEKOLAH</h2>
+                    <h3 class="text-md font-bold text-slate-700 uppercase" id="reportClassName">LAPORAN KAS</h3>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4 mb-6 text-xs border border-slate-200 p-4 rounded-lg bg-slate-50">
+                    <div><span class="text-slate-500 block">Pemasukan:</span><strong class="text-sm text-emerald-700"
+                            id="repTotalMasuk">Rp 0</strong></div>
+                    <div><span class="text-slate-500 block">Pengeluaran:</span><strong class="text-sm text-rose-700"
+                            id="repTotalKeluar">Rp 0</strong></div>
+                    <div><span class="text-slate-500 block">Saldo:</span><strong class="text-sm text-brand-700"
+                            id="repSaldoSisa">Rp 0</strong></div>
+                </div>
+
+                <h4 class="font-bold text-sm text-slate-800 mb-2">1. Akumulasi Kas Siswa</h4>
+                <table class="w-full text-xs text-left border-collapse border border-slate-300 mb-6">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-800 border-b border-slate-300">
+                            <th class="border border-slate-300 p-2 text-center w-10">No</th>
+                            <th class="border border-slate-300 p-2">Nama Siswa</th>
+                            <th class="border border-slate-300 p-2 text-right">Total Setoran</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportStudentBody"></tbody>
+                </table>
+
+                <h4 class="font-bold text-sm text-slate-800 mb-2">2. Rincian Pengeluaran</h4>
+                <table class="w-full text-xs text-left border-collapse border border-slate-300 mb-8">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-800 border-b border-slate-300">
+                            <th class="border border-slate-300 p-2 text-center w-10">No</th>
+                            <th class="border border-slate-300 p-2">Tanggal</th>
+                            <th class="border border-slate-300 p-2">Keterangan</th>
+                            <th class="border border-slate-300 p-2 text-right">Nominal</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportExpenseBody"></tbody>
+                </table>
+
+                <div class="mt-12 grid grid-cols-2 text-center text-xs">
+                    <div>
+                        <p>Mengetahui,</p>
+                        <p class="font-bold mt-1">Wali Kelas</p><br><br><br>
+                        <p class="font-bold underline" id="sigTeacherName">( ................. )</p>
+                    </div>
+                    <div>
+                        <p id="sigDateText">Tanggal: ......................</p>
+                        <p class="font-bold mt-1">Bendahara</p><br><br><br>
+                        <p class="font-bold underline" id="sigTreasurerName">( ................. )</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: SETTINGS & DATABASE -->
+        <section id="sec-settings" class="space-y-4 hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- DATA KELAS -->
+                <div class="glass-card p-5 rounded-2xl shadow-sm space-y-4">
+                    <h2 class="text-md font-bold text-slate-800 flex items-center gap-2">
+                        <i data-lucide="sliders" class="w-5 h-5 text-brand-600"></i>
+                        Identitas Kelas
+                    </h2>
+                    <form id="settingsForm" onsubmit="saveSettings(event)" class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Sekolah</label>
+                            <input type="text" id="setSchoolName" required
+                                class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-sm outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Kelas</label>
+                            <input type="text" id="setClassName" required
+                                class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-sm outline-none">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Wali Kelas</label>
+                                <input type="text" id="setTeacherName"
+                                    class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-sm outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Bendahara</label>
+                                <input type="text" id="setTreasurerName"
+                                    class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-sm outline-none">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Target Kas per Minggu
+                                (Rp)</label>
+                            <input type="number" id="setWeeklyTarget" value="5000" min="500" required
+                                class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-sm outline-none">
+                        </div>
+                        <button type="submit"
+                            class="w-full bg-brand-600 hover:bg-brand-700 text-white py-2 rounded-lg text-sm font-medium transition-all">Simpan
+                            Identitas</button>
+                    </form>
+                </div>
+
+                <!-- KONEKSI DATABASE CLOUD (GAS / APPSHEET) -->
+                <div class="glass-card p-5 rounded-2xl shadow-sm space-y-4 border-t-4 border-emerald-500">
+                    <h2 class="text-md font-bold text-slate-800 flex items-center gap-2">
+                        <i data-lucide="database" class="w-5 h-5 text-emerald-600"></i>
+                        Koneksi Backend Database (Cloud Sync)
+                    </h2>
+                    <form id="dbSettingsForm" onsubmit="saveDbSettings(event)" class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Pilih Mode Provider
+                                Backend</label>
+                            <select id="setProvider" onchange="toggleProviderFields()"
+                                class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-medium outline-none">
+                                <option value="gas">Google Apps Script Web App (Gratis & Rekomendasi)</option>
+                                <option value="appsheet">AppSheet REST API v2</option>
+                            </select>
+                        </div>
+
+                        <!-- FIELDS FOR GOOGLE APPS SCRIPT -->
+                        <div id="gasFieldsGroup" class="space-y-2">
+                            <div
+                                class="p-2.5 bg-blue-50 text-blue-800 rounded-lg text-[11px] leading-tight border border-blue-200">
+                                <strong>Google Apps Script URL:</strong> Masukkan Web App Exec URL yang didapat setelah
+                                memilih <em>Deploy as Web App (Anyone)</em> dari <code>Code.gs</code>.
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Web App Exec URL</label>
+                                <input type="url" id="setGasUrl"
+                                    placeholder="https://script.google.com/macros/s/AKfycb.../exec"
+                                    class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-mono outline-none">
+                            </div>
+                            <button type="button" onclick="initSheetsOnGAS()"
+                                class="w-full bg-blue-600 hover:bg-blue-700 text-white py-1.5 rounded-lg text-xs font-medium flex justify-center items-center gap-1.5 transition-all">
+                                <i data-lucide="table-properties" class="w-3.5 h-3.5"></i> Auto-Create Tab Spreadsheet
+                                (INIT_SHEETS)
+                            </button>
+                        </div>
+
+                        <!-- FIELDS FOR APPSHEET -->
+                        <div id="appsheetFieldsGroup" class="space-y-2 hidden">
+                            <div
+                                class="p-2.5 bg-amber-50 text-amber-800 rounded-lg text-[11px] leading-tight border border-amber-200">
+                                <strong>AppSheet API v2 Note:</strong> Kredensial AppSheet Anda disimpan aman di
+                                perangkat ini dan hanya dikirim langsung ke server Google.
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">AppSheet App ID</label>
+                                <input type="text" id="setAppId"
+                                    placeholder="Contoh: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                                    class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-mono outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Application Access
+                                    Key</label>
+                                <input type="password" id="setApiKey" placeholder="Contoh: V2-xxxxx-xxxxx-xxxxx-xxxxx"
+                                    class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-mono outline-none">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-[10px] font-semibold text-slate-600 mb-1">Nama Tabel Kas
+                                        Harian</label>
+                                    <input type="text" id="setTableKas" value="Kas_Harian"
+                                        class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-semibold text-slate-600 mb-1">Nama Tabel
+                                        Pengeluaran</label>
+                                    <input type="text" id="setTableExp" value="Pengeluaran_Kas"
+                                        class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs outline-none">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-2 flex gap-2">
+                            <button type="submit"
+                                class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-xs font-medium flex justify-center items-center gap-1.5 transition-all">
+                                <i data-lucide="link" class="w-4 h-4"></i> Simpan Konfigurasi Backend
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- KELOLA NAMA SISWA -->
+                <div class="glass-card p-5 rounded-2xl shadow-sm space-y-4 lg:col-span-2">
+                    <h2 class="text-md font-bold text-slate-800 flex items-center gap-2">
+                        <i data-lucide="users" class="w-5 h-5 text-brand-600"></i> Master Data Siswa
+                    </h2>
+                    <form onsubmit="addStudent(event)" class="flex gap-2">
+                        <input type="text" id="newStudentName" placeholder="Tambah nama siswa baru..." required
+                            class="flex-grow bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none">
+                        <button type="submit"
+                            class="bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all">Tambah</button>
+                    </form>
+                    <div class="border-t border-slate-100 pt-3">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-60 overflow-y-auto"
+                            id="studentListContainer">
+                            <!-- Dynamic Student List -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 5: PANDUAN PENGGUNAAN LENGKAP & PWA GUIDE -->
+        <section id="sec-guide" class="space-y-6 hidden">
+            <!-- HERO HEADER PANDUAN -->
+            <div class="bg-gradient-to-r from-brand-600 to-slate-900 text-white p-6 rounded-3xl shadow-sm space-y-3">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <span class="bg-amber-400 text-slate-950 text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full inline-block mb-1">
+                            Buku Manual & Tutorial
+                        </span>
+                        <h2 class="text-xl sm:text-2xl font-bold flex items-center gap-2">
+                            <i data-lucide="book-marked" class="w-6 h-6 text-amber-300"></i>
+                            Panduan Lengkap Penggunaan KasKelas
+                        </h2>
+                        <p class="text-xs sm:text-sm text-brand-100 mt-1 max-w-2xl">
+                            Pelajari cara mengoperasikan aplikasi, memasang di layar utama HP (PWA), mencatat kas & talangan LKPD, hingga SOP kerja sama 2 bendahara.
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button onclick="triggerPwaInstall()" class="px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-2 shadow-md transition-all">
+                            <i data-lucide="smartphone-charging" class="w-4 h-4"></i> Install App di HP
+                        </button>
+                    </div>
+                </div>
+
+                <!-- FILTER KATEGORI PANDUAN -->
+                <div class="pt-3 border-t border-white/10 flex flex-wrap gap-2 text-xs">
+                    <button onclick="filterGuideCategory('all')" class="guide-filter-btn px-3 py-1.5 rounded-lg bg-white/20 text-white font-medium hover:bg-white/30 transition-all active-guide-tab" data-cat="all">Semua Topik</button>
+                    <button onclick="filterGuideCategory('pwa')" class="guide-filter-btn px-3 py-1.5 rounded-lg bg-white/10 text-white/80 font-medium hover:bg-white/20 transition-all" data-cat="pwa">📱 Instalasi HP (PWA)</button>
+                    <button onclick="filterGuideCategory('kas')" class="guide-filter-btn px-3 py-1.5 rounded-lg bg-white/10 text-white/80 font-medium hover:bg-white/20 transition-all" data-cat="kas">💰 Input Kas Harian</button>
+                    <button onclick="filterGuideCategory('talangan')" class="guide-filter-btn px-3 py-1.5 rounded-lg bg-white/10 text-white/80 font-medium hover:bg-white/20 transition-all" data-cat="talangan">📑 Talangan LKPD & Piutang</button>
+                    <button onclick="filterGuideCategory('sop')" class="guide-filter-btn px-3 py-1.5 rounded-lg bg-white/10 text-white/80 font-medium hover:bg-white/20 transition-all" data-cat="sop">👥 SOP 2 Bendahara</button>
+                    <button onclick="filterGuideCategory('cloud')" class="guide-filter-btn px-3 py-1.5 rounded-lg bg-white/10 text-white/80 font-medium hover:bg-white/20 transition-all" data-cat="cloud">☁️ Google Sheets</button>
+                </div>
+            </div>
+
+            <!-- KARTU PANDUAN 1: CARA INSTALASI PWA KE HP (ANDROID & IPHONE) -->
+            <div class="guide-card glass-card p-6 rounded-2xl shadow-sm space-y-4 border-l-4 border-amber-500" data-category="pwa">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i data-lucide="smartphone" class="w-5 h-5 text-amber-600"></i>
+                        Bab 1: Cara Memasang Aplikasi (PWA) di Layar Utama HP
+                    </h3>
+                    <span class="text-xs bg-amber-100 text-amber-800 font-semibold px-2.5 py-0.5 rounded-full">Sangat Direkomendasikan</span>
+                </div>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                    KasKelas dibuat menggunakan teknologi <strong>Progressive Web App (PWA)</strong>. Artinya, aplikasi ini dapat diinstal langsung di HP Android maupun iPhone tanpa perlu download dari Google Play Store / App Store, <strong>berukuran sangat ringan (< 1 MB)</strong>, dan <strong>bisa digunakan saat offline</strong>.
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                    <!-- ANDROID -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                        <div class="flex items-center gap-2 text-emerald-700 font-bold text-xs uppercase">
+                            <i data-lucide="play" class="w-4 h-4"></i> Android (Google Chrome)
+                        </div>
+                        <ol class="text-xs text-slate-600 list-decimal list-inside space-y-1.5 pl-1">
+                            <li>Buka link aplikasi di <strong>Google Chrome</strong>.</li>
+                            <li>Tekan tombol kuning <strong>"Install App"</strong> di bagian atas atau tekan titik tiga (⋮) di kanan atas browser.</li>
+                            <li>Pilih menu <strong>"Tambahkan ke Layar Utama"</strong> atau <strong>"Install Aplikasi"</strong>.</li>
+                            <li>Ikon KasKelas akan muncul di beranda HP Anda layaknya aplikasi biasa.</li>
+                        </ol>
+                    </div>
+
+                    <!-- IPHONE / IPAD -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                        <div class="flex items-center gap-2 text-indigo-700 font-bold text-xs uppercase">
+                            <i data-lucide="apple" class="w-4 h-4"></i> iPhone / iPad (Safari)
+                        </div>
+                        <ol class="text-xs text-slate-600 list-decimal list-inside space-y-1.5 pl-1">
+                            <li>Buka link aplikasi di browser bawaan <strong>Safari</strong>.</li>
+                            <li>Tekan tombol <strong>Bagikan / Share</strong> (ikon kotak dengan panah ke atas di bilah bawah).</li>
+                            <li>Gulir ke bawah lalu pilih <strong>"Add to Home Screen" (Tambah ke Layar Utama)</strong>.</li>
+                            <li>Tekan <strong>"Add / Tambah"</strong> di kanan atas.</li>
+                        </ol>
+                    </div>
+
+                    <!-- LAPTOP / PC -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                        <div class="flex items-center gap-2 text-blue-700 font-bold text-xs uppercase">
+                            <i data-lucide="laptop" class="w-4 h-4"></i> Laptop / Komputer
+                        </div>
+                        <ol class="text-xs text-slate-600 list-decimal list-inside space-y-1.5 pl-1">
+                            <li>Buka aplikasi di Chrome atau Microsoft Edge.</li>
+                            <li>Klik ikon komputer kecil <strong>"Install"</strong> di ujung kanan kolom alamat URL (Address Bar).</li>
+                            <li>Klik <strong>Install</strong>, aplikasi akan terbuka di jendela khusus tanpa gangguan tab browser.</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button onclick="triggerPwaInstall()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-lg text-xs flex items-center gap-2">
+                        <i data-lucide="download-cloud" class="w-4 h-4"></i> Pasang Sekarang di Perangkat Ini
+                    </button>
+                </div>
+            </div>
+
+            <!-- KARTU PANDUAN 2: INPUT KAS HARIAN -->
+            <div class="guide-card glass-card p-6 rounded-2xl shadow-sm space-y-4 border-l-4 border-emerald-500" data-category="kas">
+                <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="calendar-check" class="w-5 h-5 text-emerald-600"></i>
+                    Bab 2: Panduan Input Kas Harian & Sistem Lunas
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-600">
+                    <div class="space-y-2">
+                        <h4 class="font-bold text-slate-800 text-xs uppercase text-emerald-800">Langkah Mencatat Iuran Harian:</h4>
+                        <ul class="list-disc list-inside space-y-1 pl-1">
+                            <li>Buka tab <strong>Input Harian</strong>.</li>
+                            <li>Pilih <strong>Minggu Transaksi</strong> (otomatis terpilih minggu berjalan saat ini).</li>
+                            <li>Cari nama siswa pada kotak pencarian cepat bila daftar siswa panjang.</li>
+                            <li>Klik tombol hari (<strong>Sen, Sel, Rab, Kam, Jum</strong>) untuk menandai siswa yang sudah membayar hari tersebut. Nilai nominal harian otomatis terhitung berdasarkan target mingguan dibagi 5 hari.</li>
+                        </ul>
+                    </div>
+                    <div class="space-y-2">
+                        <h4 class="font-bold text-slate-800 text-xs uppercase text-emerald-800">Fitur Lunas Cepat & Keamanan Data:</h4>
+                        <ul class="list-disc list-inside space-y-1 pl-1">
+                            <li>Gunakan tombol hijau <strong>"Lunas"</strong> untuk mencentang penuh Senin s.d. Jumat sekaligus jika siswa membayar lunas 1 minggu di awal.</li>
+                            <li>Setiap klik tersimpan instan di memori HP Anda tanpa harus menunggu sinyal internet.</li>
+                            <li>Total setoran dan sisa tagihan per siswa langsung terkalkulasi secara real-time.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KARTU PANDUAN 3: BELANJA & DANA TALANGAN LKPD -->
+            <div class="guide-card glass-card p-6 rounded-2xl shadow-sm space-y-4 border-l-4 border-amber-500" data-category="talangan">
+                <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="receipt" class="w-5 h-5 text-amber-600"></i>
+                    Bab 3: Pencatatan Talangan LKPD, Buku, & Pengembalian Siswa
+                </h3>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                    Seringkali bendahara harus mengeluarkan uang kas terlebih dahulu untuk membelikan LKPD/Buku seluruh kelas, lalu siswa mengembalikan uangnya secara mencicil. Di KasKelas, hal ini dicatat secara akurat agar saldo kas di tangan tidak selisih!
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs pt-1">
+                    <div class="bg-rose-50/70 p-3.5 rounded-xl border border-rose-200">
+                        <strong class="text-rose-900 block font-bold mb-1">🔴 Belanja Operasional</strong>
+                        <p class="text-slate-600 text-[11px]">Pengeluaran murni kelas yang tidak akan kembali (contoh: spidol papan tulis, sapu & alat kebersihan, galon air, konsumsi).</p>
+                    </div>
+                    <div class="bg-amber-50/70 p-3.5 rounded-xl border border-amber-200">
+                        <strong class="text-amber-900 block font-bold mb-1">🟡 Dana Talangan Kelas</strong>
+                        <p class="text-slate-600 text-[11px]">Uang kas yang dikeluarkan sementara untuk menalangi pembelian modul, buku paket, atau seragam siswa.</p>
+                    </div>
+                    <div class="bg-emerald-50/70 p-3.5 rounded-xl border border-emerald-200">
+                        <strong class="text-emerald-900 block font-bold mb-1">🟢 Pengembalian Talangan</strong>
+                        <p class="text-slate-600 text-[11px]">Saat siswa menyetor uang pengembalian/cicilan LKPD ke bendahara. Uang ini masuk kembali menambah saldo kas fisik.</p>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs text-slate-700">
+                    <strong>Rumus Perhitungan Otomatis:</strong>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 font-mono text-[11px]">
+                        <div class="bg-white p-2 rounded border">Saldo Fisik = (Kas Siswa + Pengembalian) - (Belanja + Talangan Keluar)</div>
+                        <div class="bg-white p-2 rounded border text-rose-700 font-bold">Sisa Piutang Siswa = Total Talangan Keluar - Total Pengembalian</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KARTU PANDUAN 4: SOP 2 BENDAHARA (ANTI-KONFLIK DATA) -->
+            <div class="guide-card glass-card p-6 rounded-2xl shadow-sm space-y-4 border-l-4 border-indigo-500" data-category="sop">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i data-lucide="users" class="w-5 h-5 text-indigo-600"></i>
+                        Bab 4: SOP Kerja Sama 2 Orang Bendahara (Anti-Bentrok Data)
+                    </h3>
+                    <span class="text-xs bg-indigo-100 text-indigo-800 font-semibold px-2.5 py-0.5 rounded-full">SOP Resmi</span>
+                </div>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                    Sistem KasKelas dirancang dengan algoritma <strong>Smart Merge & Upsert</strong> yang memungkinkan 2 bendahara (misal: Bendahara 1 absen 1–18, Bendahara 2 absen 19–36) menginput kas dari HP masing-masing tanpa menimpa atau menghilangkan data rekan kerja.
+                </p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                    <div class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-200 space-y-1">
+                        <div class="w-6 h-6 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center mb-2">1</div>
+                        <strong class="text-indigo-900 text-xs block">Langkah Awal: Tarik Data</strong>
+                        <p class="text-[11px] text-slate-600 leading-relaxed">Sebelum mulai menagih uang kas di kelas, buka aplikasi dan klik tombol <strong>"Tarik Data"</strong> di bilah atas untuk mengunduh catatan terbaru dari rekan Anda.</p>
+                    </div>
+
+                    <div class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-200 space-y-1">
+                        <div class="w-6 h-6 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center mb-2">2</div>
+                        <strong class="text-indigo-900 text-xs block">Langkah Inti: Catat Transaksi</strong>
+                        <p class="text-[11px] text-slate-600 leading-relaxed">Input setoran kas siswa atau pengeluaran seperti biasa. Aplikasi dapat digunakan dengan lancar meskipun sinyal internet lemah di dalam kelas.</p>
+                    </div>
+
+                    <div class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-200 space-y-1">
+                        <div class="w-6 h-6 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center mb-2">3</div>
+                        <strong class="text-indigo-900 text-xs block">Langkah Akhir: Sync ke Cloud</strong>
+                        <p class="text-[11px] text-slate-600 leading-relaxed">Setelah jam istirahat/pulang sekolah, tekan <strong>"Sync ke Database"</strong>. Sistem otomatis menggabungkan seluruh catatan ke Google Spreadsheet pusat.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KARTU PANDUAN 5: CETAK LAPORAN RESMI (PDF / PRINT) -->
+            <div class="guide-card glass-card p-6 rounded-2xl shadow-sm space-y-4 border-l-4 border-slate-700" data-category="kas">
+                <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="printer" class="w-5 h-5 text-slate-800"></i>
+                    Bab 5: Panduan Rekapitulasi & Cetak Laporan PDF Resmi
+                </h3>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                    Setiap akhir bulan atau akhir semester, bendahara dapat mencetak laporan pertanggungjawaban lengkap yang siap ditandatangani oleh Wali Kelas dan Ketua Kelas / Bendahara.
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-600">
+                    <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1.5">
+                        <strong class="text-slate-900 block font-semibold">Isi Lembar Laporan Cetak:</strong>
+                        <ul class="list-disc list-inside space-y-1 pl-1 text-[11px]">
+                            <li>Kop resmi Nama Sekolah & Nama Kelas.</li>
+                            <li>Ringkasan Neraca Kas (Pemasukan Riil, Belanja, Talangan, & Saldo Kas Fisik).</li>
+                            <li>Tabel Status Dana Talangan LKPD & Pengembalian Siswa.</li>
+                            <li>Tabel Rekapitulasi Total Setoran Setiap Siswa.</li>
+                            <li>Kolom Tanda Tangan Resmi Wali Kelas & Bendahara.</li>
+                        </ul>
+                    </div>
+                    <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1.5">
+                        <strong class="text-slate-900 block font-semibold">Cara Menyimpan ke File PDF:</strong>
+                        <ol class="list-decimal list-inside space-y-1 pl-1 text-[11px]">
+                            <li>Buka tab <strong>Rekapitulasi</strong>.</li>
+                            <li>Klik tombol biru <strong>"Cetak Laporan (PDF)"</strong>.</li>
+                            <li>Pada jendela cetak browser/HP, pilih tujuan printer: <strong>"Save as PDF" (Simpan sebagai PDF)</strong>.</li>
+                            <li>Klik <strong>Simpan / Save</strong>. File PDF siap dibagikan ke grup WhatsApp kelas atau dicetak fisik.</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KARTU PANDUAN 6: SETUP GOOGLE SPREADSHEET (LENGKAP DENGAN SCRIPT CODE.GS) -->
+            <div class="guide-card glass-card p-6 rounded-2xl shadow-sm space-y-4 border-l-4 border-blue-600" data-category="cloud">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i data-lucide="database" class="w-5 h-5 text-blue-600"></i>
+                        Bab 6: Cara Menghubungkan Google Sheets & Skrip Code.gs
+                    </h3>
+                    <span class="text-xs bg-blue-100 text-blue-800 font-semibold px-2.5 py-0.5 rounded-full">Gratis 100%</span>
+                </div>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                    Data kas Anda tersimpan secara aman di Google Spreadsheet milik akun Google Anda sendiri. Ikuti 4 langkah mudah berikut untuk menghubungkannya:
+                </p>
+
+                <div class="space-y-3 text-xs">
+                    <div class="p-3 bg-blue-50/60 rounded-xl border border-blue-200 space-y-1">
+                        <strong class="text-blue-900 block">1. Buat Spreadsheet & Buka Apps Script</strong>
+                        <p class="text-slate-600 text-[11px]">Buka <a href="https://sheets.new" target="_blank" class="text-brand-600 underline font-semibold">sheets.new</a> di browser Laptop/PC. Klik menu <strong>Ekstensi (Extensions) $\rightarrow$ Apps Script</strong>.</p>
+                    </div>
+                    <div class="p-3 bg-blue-50/60 rounded-xl border border-blue-200 space-y-1">
+                        <strong class="text-blue-900 block">2. Tempel Kode Script Code.gs</strong>
+                        <p class="text-slate-600 text-[11px]">Hapus seluruh kode default di editor Apps Script, lalu tempel kode script backend KasKelas di bawah ini.</p>
+                        <div class="pt-2">
+                            <button onclick="copyCodeGsScript()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-xs flex items-center gap-1.5 transition-all shadow-xs">
+                                <i data-lucide="copy" class="w-3.5 h-3.5"></i> Salin Seluruh Kode Code.gs (1-Klik)
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-blue-50/60 rounded-xl border border-blue-200 space-y-1">
+                        <strong class="text-blue-900 block">3. Terapkan Sebagai Web App (Deploy)</strong>
+                        <p class="text-slate-600 text-[11px]">Klik tombol biru <strong>Deploy (Terapkan) $\rightarrow$ New Deployment (Penerapan Baru)</strong>. Pilih tipe <strong>Web app</strong>. Atur <em>Execute as:</em> <strong>Me</strong> dan <em>Who has access:</em> <strong>Anyone (Siapa saja)</strong>. Klik Deploy & izinkan akses.</p>
+                    </div>
+                    <div class="p-3 bg-blue-50/60 rounded-xl border border-blue-200 space-y-1">
+                        <strong class="text-blue-900 block">4. Tempel URL di Menu Pengaturan</strong>
+                        <p class="text-slate-600 text-[11px]">Salin URL Web App yang berakhiran <code>/exec</code>, buka menu <strong>Pengaturan</strong> di aplikasi KasKelas, lalu tempelkan ke kolom <strong>Web App Exec URL</strong> dan klik <strong>Simpan</strong>.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KARTU PANDUAN 7: FAQ & TROUBLESHOOTING -->
+            <div class="guide-card glass-card p-6 rounded-2xl shadow-sm space-y-4 border-l-4 border-slate-400" data-category="all">
+                <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="help-circle" class="w-5 h-5 text-slate-600"></i>
+                    Bab 7: Tanya Jawab (FAQ) & Solusi Kendala
+                </h3>
+                <div class="space-y-3 text-xs">
+                    <div class="border border-slate-200 rounded-xl p-3 bg-slate-50">
+                        <strong class="text-slate-800 block text-xs mb-1">❓ Apakah aplikasi ini bisa dipakai jika tidak ada kuota internet?</strong>
+                        <p class="text-slate-600 text-[11px]">BISA. Seluruh pencatatan kas, centang kehadiran, dan tambah pengeluaran disimpan di memori HP Anda terlebih dahulu. Saat HP Anda terhubung ke internet, cukup tekan tombol <strong>"Sync ke Database"</strong>.</p>
+                    </div>
+                    <div class="border-border-slate-200 rounded-xl p-3 bg-slate-50">
+                        <strong class="text-slate-800 block text-xs mb-1">❓ Bagaimana jika HP bendahara hilang atau ganti HP baru?</strong>
+                        <p class="text-slate-600 text-[11px]">Jangan khawatir! Karena seluruh data sudah tersimpan di Google Spreadsheet, di HP baru Anda cukup buka link aplikasi, masukkan Web App URL di menu Pengaturan, lalu tekan tombol <strong>"Tarik Data"</strong>. Seluruh data akan kembali utuh 100%.</p>
+                    </div>
+                    <div class="border border-slate-200 rounded-xl p-3 bg-slate-50">
+                        <strong class="text-slate-800 block text-xs mb-1">❓ Muncul pesan "Gagal Sync / Network Error"?</strong>
+                        <p class="text-slate-600 text-[11px]">Pastikan saat melakukan Deploy di Google Apps Script, opsi <em>"Who has access"</em> diatur ke <strong>"Anyone" (Siapa saja)</strong> agar HP diizinkan mengirim data ke Google Sheets.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- MODAL PETUNJUK INSTALASI IPHONE / IOS SAFARI -->
+    <div id="modalIosInstall" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+        <div class="bg-white max-w-md w-full rounded-3xl p-6 shadow-2xl space-y-4 border border-slate-100">
+            <div class="flex items-center justify-between border-b pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="p-2 bg-indigo-50 text-indigo-700 rounded-xl">
+                        <i data-lucide="apple" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-sm">Cara Pasang di iPhone / iPad</h3>
+                        <p class="text-[11px] text-slate-500">Gunakan browser bawaan Safari</p>
+                    </div>
+                </div>
+                <button onclick="closeIosModal()" class="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="space-y-3 text-xs text-slate-600">
+                <div class="flex items-start gap-3 p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <span class="w-6 h-6 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center shrink-0 text-xs">1</span>
+                    <p class="pt-0.5">Buka link web ini menggunakan browser <strong>Safari</strong> di iPhone Anda.</p>
+                </div>
+                <div class="flex items-start gap-3 p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <span class="w-6 h-6 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center shrink-0 text-xs">2</span>
+                    <p class="pt-0.5">Tekan tombol <strong>Bagikan / Share</strong> <i data-lucide="share" class="w-4 h-4 inline text-indigo-600"></i> di bilah bawah layar iPhone Anda.</p>
+                </div>
+                <div class="flex items-start gap-3 p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <span class="w-6 h-6 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center shrink-0 text-xs">3</span>
+                    <p class="pt-0.5">Gulir ke bawah dan pilih <strong>"Add to Home Screen" (Tambah ke Layar Utama)</strong> <i data-lucide="plus-square" class="w-4 h-4 inline text-indigo-600"></i>.</p>
+                </div>
+                <div class="flex items-start gap-3 p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <span class="w-6 h-6 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center shrink-0 text-xs">4</span>
+                    <p class="pt-0.5">Tekan <strong>Tambah (Add)</strong> di pojok kanan atas. Ikon aplikasi KasKelas langsung terpasang di layar utama!</p>
+                </div>
+            </div>
+            <button onclick="closeIosModal()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-all">
+                Mengerti
+            </button>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT APP & API LOGIC -->
+    <script>
+        // --- 1. STATE & DATA STRUCTURE ---
+        const DEFAULT_STUDENTS = ["Ahmad Rizki", "Siti Nurhaliza", "Dimas Anggara"];
+
+        let appState = {
+            settings: {
+                schoolName: "SD NEGERI 1 MERDEKA", className: "KELAS 5A",
+                teacherName: "", treasurerName: "", weeklyTarget: 5000
+            },
+            apiConfig: {
+                provider: "gas", // "gas" atau "appsheet"
+                gasUrl: "",
+                appId: "", apiKey: "", tableKas: "Kas_Harian", tableExp: "Pengeluaran_Kas"
+            },
+            students: DEFAULT_STUDENTS,
+            kasRecords: {}, // { "2026-W31": { "NamaSiswa": { mon:1000, tue:1000..., synced: false } } }
+            expenses: [],   // [ { id: "1722", date: "2026-07-31", amount: 15000, note: "Spidol", synced: false } ]
+            deletedExpensesQueue: [],
+            deletedStudentsQueue: []
+        };
+
+        // --- 2. INITIALIZATION & STORAGE ---
+        document.addEventListener("DOMContentLoaded", () => {
+            loadData();
+            initCurrentWeek();
+            handleTypeChange();
+            renderAll();
+            lucide.createIcons();
+            registerServiceWorker();
+        });
+
+        function loadData() {
+            const data = localStorage.getItem("kaskelas_db_v2");
+            if (data) {
+                try {
+                    const parsed = JSON.parse(data);
+                    if (parsed.settings) appState.settings = { ...appState.settings, ...parsed.settings };
+                    if (parsed.apiConfig) appState.apiConfig = { ...appState.apiConfig, ...parsed.apiConfig };
+                    if (parsed.students) appState.students = parsed.students || DEFAULT_STUDENTS;
+                    if (parsed.kasRecords) appState.kasRecords = parsed.kasRecords || {};
+                    if (parsed.expenses) appState.expenses = parsed.expenses || [];
+                    if (parsed.deletedExpensesQueue) appState.deletedExpensesQueue = parsed.deletedExpensesQueue || [];
+                    if (parsed.deletedStudentsQueue) appState.deletedStudentsQueue = parsed.deletedStudentsQueue || [];
+                } catch (e) {
+                    console.error("Gagal meload data lokal:", e);
+                }
+            }
+            // Pastikan weeklyTarget selalu Number
+            appState.settings.weeklyTarget = parseInt(appState.settings.weeklyTarget) || 5000;
+            populateSettingsForm();
+        }
+
+        function populateSettingsForm() {
+            // Pastikan weeklyTarget selalu Number setiap kali populate
+            appState.settings.weeklyTarget = parseInt(appState.settings.weeklyTarget) || 5000;
+
+            // Populate Identitas Kelas
+            document.getElementById("setSchoolName").value = appState.settings.schoolName || "";
+            document.getElementById("setClassName").value = appState.settings.className || "";
+            document.getElementById("setTeacherName").value = appState.settings.teacherName || "";
+            document.getElementById("setTreasurerName").value = appState.settings.treasurerName || "";
+            document.getElementById("setWeeklyTarget").value = appState.settings.weeklyTarget;
+
+            // Populate Konfigurasi Backend
+            document.getElementById("setProvider").value = appState.apiConfig.provider || "gas";
+            document.getElementById("setGasUrl").value = appState.apiConfig.gasUrl || "";
+            document.getElementById("setAppId").value = appState.apiConfig.appId || "";
+            document.getElementById("setApiKey").value = appState.apiConfig.apiKey || "";
+            document.getElementById("setTableKas").value = appState.apiConfig.tableKas || "Kas_Harian";
+            document.getElementById("setTableExp").value = appState.apiConfig.tableExp || "Pengeluaran_Kas";
+
+            toggleProviderFields();
+            updateHeader();
+        }
+
+        function saveData() {
+            localStorage.setItem("kaskelas_db_v2", JSON.stringify(appState));
+        }
+
+        function updateHeader() {
+            document.getElementById("headerAppTitle").textContent = `Kas ${appState.settings.className}`;
+            document.getElementById("headerSubTitle").textContent = appState.settings.schoolName;
+        }
+
+        function toggleProviderFields() {
+            const provider = document.getElementById("setProvider").value;
+            const gasGroup = document.getElementById("gasFieldsGroup");
+            const appsheetGroup = document.getElementById("appsheetFieldsGroup");
+
+            if (provider === "gas") {
+                gasGroup.classList.remove("hidden");
+                appsheetGroup.classList.add("hidden");
+            } else {
+                gasGroup.classList.add("hidden");
+                appsheetGroup.classList.remove("hidden");
+            }
+        }
+
+        function getWeekString(date) {
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dayNum = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+            return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+        }
+
+        function initCurrentWeek() {
+            const today = new Date();
+            document.getElementById("inputWeekPicker").value = getWeekString(today);
+
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            document.getElementById("expDate").value = `${year}-${month}-${day}`;
+        }
+
+        // --- 3. UI RENDERERS ---
+        function showSection(sectionId) {
+            ['input-kas', 'pengeluaran', 'rekap', 'guide', 'settings'].forEach(id => {
+                const secEl = document.getElementById(`sec-${id}`);
+                if (secEl) secEl.classList.toggle('hidden', id !== sectionId);
+                const tab = document.getElementById(`tab-${id}`);
+                if (tab) {
+                    if (id === sectionId) {
+                        tab.classList.add('bg-white', 'text-brand-600', 'shadow-sm');
+                        tab.classList.remove('text-slate-600');
+                    } else {
+                        tab.classList.remove('bg-white', 'text-brand-600', 'shadow-sm');
+                        tab.classList.add('text-slate-600');
+                    }
+                }
+            });
+            renderAll();
+            lucide.createIcons();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function renderAll() {
+            renderKasTable();
+            renderExpenses();
+            renderStudents();
+            calculateStats();
+        }
+
+        // --- 4. CORE CRUD LOGIC (OFFLINE FIRST) ---
+        const EXPENSE_CATEGORIES = {
+            expense: [
+                "Kebersihan & Alat Kelas",
+                "Fotokopi & Modul",
+                "Konsumsi & Acara",
+                "Sosial & Sakit",
+                "Perlengkapan Lomba",
+                "Lain-lain"
+            ],
+            talangan: [
+                "Talangan LKPD / Modul Siswa",
+                "Talangan Buku Paket / LKS",
+                "Talangan Kaos / Seragam Kelas",
+                "Talangan Atribut / Topi / Dasi",
+                "Talangan Pendaftaran Lomba",
+                "Talangan Kegiatan Lainnya"
+            ],
+            reimburse: [
+                "Pengembalian Talangan LKPD / Modul",
+                "Pengembalian Talangan Buku Paket",
+                "Pengembalian Talangan Seragam",
+                "Pengembalian Talangan Lainnya",
+                "Donasi / Sumbangan Sukarela",
+                "Pemasukan Lain-lain"
+            ]
+        };
+
+        function handleTypeChange() {
+            const type = document.getElementById("expType")?.value || "expense";
+            const catSelect = document.getElementById("expCategory");
+            const noteLabel = document.getElementById("expNoteLabel");
+            const noteInp = document.getElementById("expNote");
+            const icon = document.getElementById("expFormIcon");
+            const submitBtn = document.getElementById("expSubmitBtn");
+
+            const categories = EXPENSE_CATEGORIES[type] || EXPENSE_CATEGORIES.expense;
+            if (catSelect) {
+                catSelect.innerHTML = categories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+            }
+
+            if (type === "reimburse") {
+                if (icon) { icon.className = "w-5 h-5 text-emerald-600"; icon.setAttribute("data-lucide", "arrow-down-circle"); }
+                if (noteLabel) noteLabel.textContent = "Keterangan / Nama Siswa yang Mengembalikan";
+                if (noteInp) noteInp.placeholder = "Contoh: Pengembalian LKPD dari Budi & 4 siswa lainnya (Rp 50.000)";
+                if (submitBtn) {
+                    submitBtn.className = "flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg transition-all text-xs flex items-center justify-center gap-1.5 shadow-xs";
+                    submitBtn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i> Simpan Pemasukan / Pengembalian';
+                }
+            } else if (type === "talangan") {
+                if (icon) { icon.className = "w-5 h-5 text-amber-600"; icon.setAttribute("data-lucide", "book-open"); }
+                if (noteLabel) noteLabel.textContent = "Keterangan Keperluan Talangan";
+                if (noteInp) noteInp.placeholder = "Contoh: Talangan LKPD Sejarah untuk 20 siswa";
+                if (submitBtn) {
+                    submitBtn.className = "flex-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2.5 rounded-lg transition-all text-xs flex items-center justify-center gap-1.5 shadow-xs";
+                    submitBtn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i> Simpan Dana Talangan';
+                }
+            } else {
+                if (icon) { icon.className = "w-5 h-5 text-rose-600"; icon.setAttribute("data-lucide", "plus-circle"); }
+                if (noteLabel) noteLabel.textContent = "Keterangan / Keperluan Belanja";
+                if (noteInp) noteInp.placeholder = "Contoh: Beli spidol & penghapus whiteboard";
+                if (submitBtn) {
+                    submitBtn.className = "flex-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2.5 rounded-lg transition-all text-xs flex items-center justify-center gap-1.5 shadow-xs";
+                    submitBtn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i> Simpan Pengeluaran';
+                }
+            }
+            lucide.createIcons();
+        }
+
+        function renderKasTable() {
+            const weekStr = document.getElementById("inputWeekPicker").value;
+            const searchQuery = (document.getElementById("searchStudentInput")?.value || "").toLowerCase().trim();
+            const tbody = document.getElementById("kasTableBody");
+            tbody.innerHTML = "";
+            if (!appState.kasRecords[weekStr]) appState.kasRecords[weekStr] = {};
+
+            const weekData = appState.kasRecords[weekStr];
+            let filteredStudents = appState.students.filter(st => st.toLowerCase().includes(searchQuery));
+
+            if (filteredStudents.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-xs text-slate-400">Tidak ada siswa ditemukan</td></tr>`;
+                return;
+            }
+
+            filteredStudents.forEach((student, index) => {
+                if (!weekData[student]) weekData[student] = { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, synced: false };
+                const s = weekData[student];
+                const total = s.mon + s.tue + s.wed + s.thu + s.fri;
+                const isLunas = total >= appState.settings.weeklyTarget;
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-slate-50 border-b border-slate-50";
+
+                let daysHtml = ['mon', 'tue', 'wed', 'thu', 'fri'].map(day =>
+                    `<td class="py-2 px-1 text-center">
+                        <input type="checkbox" ${s[day] > 0 ? 'checked' : ''} onchange="updateKas('${weekStr}', '${escapeJs(student)}', '${day}', this.checked, event)" class="w-4 h-4 text-brand-600 rounded cursor-pointer">
+                    </td>`
+                ).join('');
+
+                tr.innerHTML = `
+                    <td class="py-2 px-3 text-slate-400">${index + 1}</td>
+                    <td class="py-2 px-3 font-medium text-slate-800">${escapeHtml(student)}</td>
+                    ${daysHtml}
+                    <td class="py-2 px-3 text-right font-bold text-slate-700">Rp ${total.toLocaleString('id-ID')}</td>
+                    <td class="py-2 px-3 text-center">
+                        <span class="px-2 py-0.5 text-[10px] rounded ${isLunas ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}">${isLunas ? 'LUNAS' : 'BELUM'}</span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateKas(week, student, day, isChecked, event) {
+            if (!appState.kasRecords[week]) appState.kasRecords[week] = {};
+            if (!appState.kasRecords[week][student]) {
+                appState.kasRecords[week][student] = { mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, synced: false };
+            }
+
+            const amount = isChecked ? (appState.settings.weeklyTarget / 5) : 0;
+            appState.kasRecords[week][student][day] = amount;
+            appState.kasRecords[week][student].synced = false;
+            saveData();
+            calculateStats();
+
+            if (event && event.target) {
+                const tr = event.target.closest('tr');
+                if (tr) {
+                    const s = appState.kasRecords[week][student];
+                    const total = (s.mon || 0) + (s.tue || 0) + (s.wed || 0) + (s.thu || 0) + (s.fri || 0);
+                    const isLunas = total >= appState.settings.weeklyTarget;
+
+                    const totalCell = tr.querySelector('td:nth-last-child(2)');
+                    const statusCell = tr.querySelector('td:last-child span');
+
+                    if (totalCell) totalCell.textContent = `Rp ${total.toLocaleString('id-ID')}`;
+                    if (statusCell) {
+                        statusCell.textContent = isLunas ? 'LUNAS' : 'BELUM';
+                        statusCell.className = `px-2 py-0.5 text-[10px] rounded ${isLunas ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`;
+                    }
+                }
+            }
+        }
+
+        function saveKasManual() {
+            saveData();
+            calculateStats();
+            alert("Data Kas Harian berhasil disimpan secara offline!\n\nJika ingin menyimpannya ke awan (Google Sheets), jangan lupa klik tombol 'Sync ke Database' di menu atas.");
+        }
+
+        function saveExpense(e) {
+            e.preventDefault();
+            const editId = document.getElementById("expEditId").value;
+            const dateVal = document.getElementById("expDate").value;
+            const typeVal = document.getElementById("expType").value || "expense";
+            const categoryVal = document.getElementById("expCategory").value || "Lain-lain";
+            const amountVal = parseFloat(document.getElementById("expAmount").value);
+            const noteVal = document.getElementById("expNote").value;
+
+            if (editId) {
+                // UPDATE EXPENSE
+                const item = appState.expenses.find(x => x.id === editId);
+                if (item) {
+                    item.date = dateVal;
+                    item.type = typeVal;
+                    item.category = categoryVal;
+                    item.amount = amountVal;
+                    item.note = noteVal;
+                    item.synced = false;
+                }
+            } else {
+                // CREATE EXPENSE / TALANGAN / REIMBURSE
+                const exp = {
+                    id: Date.now().toString(),
+                    date: dateVal,
+                    type: typeVal,
+                    category: categoryVal,
+                    amount: amountVal,
+                    note: noteVal,
+                    synced: false
+                };
+                appState.expenses.push(exp);
+            }
+
+            saveData();
+            resetExpenseForm();
+            renderExpenses();
+            calculateStats();
+        }
+
+        function editExpense(id) {
+            const item = appState.expenses.find(x => x.id === id);
+            if (!item) return;
+
+            document.getElementById("expEditId").value = item.id;
+            document.getElementById("expType").value = item.type || (item.category && item.category.toLowerCase().includes("talangan") ? "talangan" : (item.category && item.category.toLowerCase().includes("pengembalian") ? "reimburse" : "expense"));
+            handleTypeChange();
+            document.getElementById("expCategory").value = item.category || "Lain-lain";
+            document.getElementById("expDate").value = item.date;
+            document.getElementById("expAmount").value = item.amount;
+            document.getElementById("expNote").value = item.note;
+
+            document.getElementById("expFormTitle").textContent = "Edit Transaksi Kas";
+            document.getElementById("expSubmitBtn").innerHTML = `<i data-lucide="check" class="w-4 h-4"></i> Update Transaksi`;
+            document.getElementById("expCancelBtn").classList.remove("hidden");
+            lucide.createIcons();
+        }
+
+        function deleteExpense(id) {
+            if (!confirm("Apakah Anda yakin ingin menghapus data transaksi ini?")) return;
+
+            // Tambahkan ke queue delete agar terhapus di backend
+            if (!appState.deletedExpensesQueue.includes(id)) {
+                appState.deletedExpensesQueue.push(id);
+            }
+            appState.expenses = appState.expenses.filter(x => x.id !== id);
+            saveData();
+            renderExpenses();
+            calculateStats();
+        }
+
+        function resetExpenseForm() {
+            document.getElementById("expenseForm").reset();
+            document.getElementById("expEditId").value = "";
+            document.getElementById("expType").value = "expense";
+            handleTypeChange();
+            document.getElementById("expFormTitle").textContent = "Catat Transaksi Kas";
+            document.getElementById("expSubmitBtn").innerHTML = `<i data-lucide="save" class="w-4 h-4"></i> Simpan Transaksi`;
+            document.getElementById("expCancelBtn").classList.add("hidden");
+            initCurrentWeek();
+            lucide.createIcons();
+        }
+
+        function renderExpenses() {
+            const searchQuery = (document.getElementById("searchExpenseInput")?.value || "").toLowerCase().trim();
+            const filterType = document.getElementById("filterExpType")?.value || "all";
+            const tbody = document.getElementById("expenseTableBody");
+            tbody.innerHTML = "";
+
+            const filteredExpenses = appState.expenses.filter(item => {
+                const itemType = item.type || (item.category && item.category.toLowerCase().includes("talangan") ? "talangan" : (item.category && item.category.toLowerCase().includes("pengembalian") ? "reimburse" : "expense"));
+                const matchType = (filterType === "all") || (itemType === filterType);
+                const matchSearch = (item.note || "").toLowerCase().includes(searchQuery) ||
+                                    (item.date || "").includes(searchQuery) ||
+                                    (item.category || "").toLowerCase().includes(searchQuery);
+                return matchType && matchSearch;
+            });
+
+            if (filteredExpenses.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-xs text-slate-400">Tidak ada riwayat transaksi ditemukan</td></tr>`;
+                return;
+            }
+
+            [...filteredExpenses].reverse().forEach(item => {
+                const itemType = item.type || (item.category && item.category.toLowerCase().includes("talangan") ? "talangan" : (item.category && item.category.toLowerCase().includes("pengembalian") ? "reimburse" : "expense"));
+                
+                let typeBadge = "";
+                let amountClass = "text-rose-600";
+                let prefix = "- ";
+
+                if (itemType === "talangan") {
+                    typeBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 flex items-center gap-1 w-fit"><i data-lucide="book-open" class="w-3 h-3"></i> Talangan</span>`;
+                    amountClass = "text-amber-700";
+                    prefix = "- ";
+                } else if (itemType === "reimburse") {
+                    typeBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 flex items-center gap-1 w-fit"><i data-lucide="arrow-down-left" class="w-3 h-3"></i> Masuk/Kembali</span>`;
+                    amountClass = "text-emerald-600";
+                    prefix = "+ ";
+                } else {
+                    typeBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 text-rose-800 flex items-center gap-1 w-fit"><i data-lucide="shopping-cart" class="w-3 h-3"></i> Belanja</span>`;
+                    amountClass = "text-rose-600";
+                    prefix = "- ";
+                }
+
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-slate-50 border-b border-slate-100";
+                tr.innerHTML = `
+                    <td class="py-2.5 px-3 text-xs whitespace-nowrap text-slate-500">${item.date}</td>
+                    <td class="py-2.5 px-3 whitespace-nowrap">
+                        <div class="flex flex-col gap-0.5">
+                            ${typeBadge}
+                            <span class="text-[11px] text-slate-400 font-medium">${escapeHtml(item.category || "Umum")}</span>
+                        </div>
+                    </td>
+                    <td class="py-2.5 px-3 font-medium text-slate-800">
+                        ${escapeHtml(item.note)}
+                    </td>
+                    <td class="py-2.5 px-3 text-right font-bold whitespace-nowrap ${amountClass}">
+                        ${prefix}Rp ${(item.amount || 0).toLocaleString('id-ID')}
+                    </td>
+                    <td class="py-2.5 px-3 text-center whitespace-nowrap">
+                        <div class="flex items-center justify-center gap-2">
+                            <button onclick="editExpense('${item.id}')" class="text-brand-600 hover:text-brand-800 p-1" title="Edit Transaksi"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="deleteExpense('${item.id}')" class="text-rose-500 hover:text-rose-700 p-1" title="Hapus"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            lucide.createIcons();
+        }
+
+        function renderStudents() {
+            const cont = document.getElementById("studentListContainer");
+            cont.innerHTML = "";
+            appState.students.forEach((name, idx) => {
+                const div = document.createElement("div");
+                div.className = "flex justify-between p-2 border border-slate-100 rounded bg-white text-xs items-center shadow-xs";
+                div.id = `student-item-${idx}`;
+                div.innerHTML = `
+                <span class="font-medium text-slate-700">${escapeHtml(name)}</span>
+                <div class="flex items-center gap-1">
+                    <button onclick="editStudent(${idx})" class="text-slate-400 hover:text-brand-600 p-1" title="Edit Nama Siswa"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+                    <button onclick="deleteStudent(${idx})" class="text-slate-400 hover:text-rose-500 p-1" title="Hapus Siswa"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+                </div>`;
+                cont.appendChild(div);
+            });
+            lucide.createIcons();
+        }
+
+        function editStudent(index) {
+            const oldName = appState.students[index];
+            const div = document.getElementById(`student-item-${index}`);
+            if (!div) return;
+            div.innerHTML = `
+                <input type="text" id="editStudentInput-${index}" value="${escapeHtml(oldName)}" class="flex-grow bg-slate-50 border border-brand-400 rounded px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-brand-500 mr-1">
+                <div class="flex items-center gap-1 flex-shrink-0">
+                    <button onclick="saveEditStudent(${index}, '${escapeJs(oldName)}')" class="text-emerald-600 hover:text-emerald-800 p-1" title="Simpan"><i data-lucide="check" class="w-3.5 h-3.5"></i></button>
+                    <button onclick="renderStudents()" class="text-slate-400 hover:text-slate-600 p-1" title="Batal"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+                </div>`;
+            lucide.createIcons();
+            const inp = document.getElementById(`editStudentInput-${index}`);
+            if (inp) { inp.focus(); inp.select(); }
+        }
+
+        function saveEditStudent(index, oldName) {
+            const inp = document.getElementById(`editStudentInput-${index}`);
+            if (!inp) return;
+            const newName = inp.value.trim();
+            if (!newName) { alert("Nama siswa tidak boleh kosong!"); return; }
+            if (newName === oldName) { renderStudents(); return; }
+            // Cek duplikat (case-insensitive)
+            if (appState.students.some((s, i) => i !== index && s.toLowerCase() === newName.toLowerCase())) {
+                alert(`Nama "${newName}" sudah ada di daftar siswa!`); return;
+            }
+            
+            // Masukkan nama lama ke antrean hapus agar sinkronisasi backend membersihkannya
+            if (!appState.deletedStudentsQueue.includes(oldName)) {
+                appState.deletedStudentsQueue.push(oldName);
+            }
+            
+            // Update nama di daftar siswa
+            appState.students[index] = newName;
+            // Update nama di semua kasRecords
+            Object.keys(appState.kasRecords).forEach(week => {
+                if (appState.kasRecords[week][oldName]) {
+                    appState.kasRecords[week][newName] = appState.kasRecords[week][oldName];
+                    appState.kasRecords[week][newName].synced = false;
+                    delete appState.kasRecords[week][oldName];
+                }
+            });
+            saveData();
+            renderAll();
+        }
+
+        function addStudent(e) {
+            e.preventDefault();
+            const input = document.getElementById("newStudentName");
+            const val = input.value.trim();
+            if (!val) { alert("Nama siswa tidak boleh kosong!"); return; }
+            // Cek duplikat (case-insensitive)
+            if (appState.students.some(s => s.toLowerCase() === val.toLowerCase())) {
+                alert(`Nama "${val}" sudah ada di daftar siswa!`); return;
+            }
+            appState.students.push(val);
+            saveData();
+            input.value = "";
+            renderAll();
+        }
+
+        function deleteStudent(index) {
+            const studentName = appState.students[index];
+            if (!confirm(`Hapus siswa "${studentName}" dari master data?`)) return;
+
+            if (!appState.deletedStudentsQueue.includes(studentName)) {
+                appState.deletedStudentsQueue.push(studentName);
+            }
+            appState.students.splice(index, 1);
+            saveData();
+            renderAll();
+        }
+
+        function calculateStats() {
+            // 1. Hitung Total Kas Masuk dari Iuran Mingguan Siswa
+            let totalKasSiswa = 0;
+            Object.values(appState.kasRecords).forEach(w => {
+                Object.values(w).forEach(s => {
+                    totalKasSiswa += (s.mon || 0) + (s.tue || 0) + (s.wed || 0) + (s.thu || 0) + (s.fri || 0);
+                });
+            });
+
+            // 2. Hitung Rincian Transaksi Pengeluaran, Talangan, & Pengembalian
+            let totalBelanjaMurni = 0;
+            let totalTalanganKeluar = 0;
+            let totalPengembalianMasuk = 0;
+
+            appState.expenses.forEach(item => {
+                const amt = Number(item.amount) || 0;
+                const type = item.type || (item.category && item.category.toLowerCase().includes("talangan") ? "talangan" : (item.category && item.category.toLowerCase().includes("pengembalian") ? "reimburse" : "expense"));
+                
+                if (type === "talangan") {
+                    totalTalanganKeluar += amt;
+                } else if (type === "reimburse") {
+                    totalPengembalianMasuk += amt;
+                } else {
+                    totalBelanjaMurni += amt;
+                }
+            });
+
+            // Total Pemasukan Riil = Kas Siswa + Pengembalian Talangan/Pemasukan Lain
+            const grandTotalMasuk = totalKasSiswa + totalPengembalianMasuk;
+            // Total Pengeluaran Riil = Belanja Rutin + Dana Talangan yang Keluar
+            const grandTotalKeluar = totalBelanjaMurni + totalTalanganKeluar;
+            // Saldo Kas Sisa Riil yang ada di tangan Bendahara
+            const saldoKasSisa = grandTotalMasuk - grandTotalKeluar;
+
+            // Sisa Piutang Talangan (Uang kas yang belum kembali dari siswa)
+            const sisaPiutangTalangan = Math.max(0, totalTalanganKeluar - totalPengembalianMasuk);
+
+            // Update Widgets
+            document.getElementById("statTotalMasuk").textContent = `Rp ${grandTotalMasuk.toLocaleString('id-ID')}`;
+            document.getElementById("statTotalKeluar").textContent = `Rp ${grandTotalKeluar.toLocaleString('id-ID')}`;
+            document.getElementById("statSaldoSisa").textContent = `Rp ${saldoKasSisa.toLocaleString('id-ID')}`;
+
+            document.getElementById("statTargetInfo").textContent = `Kas: Rp ${totalKasSiswa.toLocaleString('id-ID')} | Kembali: Rp ${totalPengembalianMasuk.toLocaleString('id-ID')}`;
+
+            // Update Widget Khusus Status Talangan LKPD
+            const elTalKeluar = document.getElementById("statTalKeluar");
+            const elTalKembali = document.getElementById("statTalKembali");
+            const elTalSisa = document.getElementById("statTalSisa");
+            if (elTalKeluar) elTalKeluar.textContent = `Rp ${totalTalanganKeluar.toLocaleString('id-ID')}`;
+            if (elTalKembali) elTalKembali.textContent = `Rp ${totalPengembalianMasuk.toLocaleString('id-ID')}`;
+            if (elTalSisa) elTalSisa.textContent = `Rp ${sisaPiutangTalangan.toLocaleString('id-ID')}`;
+
+            // Count Lunas
+            const currentWeek = document.getElementById("inputWeekPicker").value;
+            let lunasCount = 0;
+            if (appState.kasRecords[currentWeek]) {
+                Object.values(appState.kasRecords[currentWeek]).forEach(s => {
+                    const tot = (s.mon || 0) + (s.tue || 0) + (s.wed || 0) + (s.thu || 0) + (s.fri || 0);
+                    if (tot >= appState.settings.weeklyTarget) lunasCount++;
+                });
+            }
+            document.getElementById("statSiswaLunasCount").textContent = `${lunasCount} / ${appState.students.length} Siswa Lunas Minggu Ini`;
+            document.getElementById("statJumlahPengeluaran").textContent = `${appState.expenses.length} Total Transaksi`;
+
+            // Sync to Report Template
+            document.getElementById("repTotalMasuk").textContent = `Rp ${grandTotalMasuk.toLocaleString('id-ID')}`;
+            document.getElementById("repTotalKeluar").textContent = `Rp ${grandTotalKeluar.toLocaleString('id-ID')}`;
+            document.getElementById("repSaldoSisa").textContent = `Rp ${saldoKasSisa.toLocaleString('id-ID')}`;
+
+            document.getElementById("reportSchoolName").textContent = appState.settings.schoolName;
+            document.getElementById("reportClassName").textContent = `LAPORAN KAS ${appState.settings.className}`;
+            document.getElementById("sigTeacherName").textContent = `( ${appState.settings.teacherName || "........................"} )`;
+            document.getElementById("sigTreasurerName").textContent = `( ${appState.settings.treasurerName || "........................"} )`;
+
+            // Set Tanggal Tanda Tangan Cetak sesuai tanggal hari ini
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            const todayStr = new Date().toLocaleDateString('id-ID', options);
+            document.getElementById("sigDateText").textContent = `Tanggal: ${todayStr}`;
+
+            const stBody = document.getElementById("reportStudentBody");
+            stBody.innerHTML = "";
+            appState.students.forEach((st, idx) => {
+                let tot = 0;
+                Object.values(appState.kasRecords).forEach(w => {
+                    if (w[st]) tot += (w[st].mon || 0) + (w[st].tue || 0) + (w[st].wed || 0) + (w[st].thu || 0) + (w[st].fri || 0);
+                });
+                stBody.innerHTML += `<tr><td class="border border-slate-300 p-2 text-center">${idx + 1}</td><td class="border border-slate-300 p-2">${escapeHtml(st)}</td><td class="border border-slate-300 p-2 text-right">Rp ${tot.toLocaleString('id-ID')}</td></tr>`;
+            });
+            
+            const exBody = document.getElementById("reportExpenseBody");
+            exBody.innerHTML = appState.expenses.map((e, i) => {
+                const type = e.type || (e.category && e.category.toLowerCase().includes("talangan") ? "talangan" : (e.category && e.category.toLowerCase().includes("pengembalian") ? "reimburse" : "expense"));
+                const badge = type === "talangan" ? "[TALANGAN] " : (type === "reimburse" ? "[PENGEMBALIAN] " : "");
+                return `<tr><td class="border border-slate-300 p-2 text-center">${i + 1}</td><td class="border border-slate-300 p-2">${e.date}</td><td class="border border-slate-300 p-2">${badge}${escapeHtml(e.note)} <span class="text-slate-400 text-[10px]">(${escapeHtml(e.category || "-")})</span></td><td class="border border-slate-300 p-2 text-right">Rp ${Number(e.amount || 0).toLocaleString('id-ID')}</td></tr>`;
+            }).join('');
+        }
+
+        // --- 5. BACKEND API INTEGRATION (GOOGLE APPS SCRIPT / APPSHEET) ---
+        function saveSettings(e) {
+            e.preventDefault();
+            appState.settings.schoolName = document.getElementById("setSchoolName").value;
+            appState.settings.className = document.getElementById("setClassName").value;
+            appState.settings.teacherName = document.getElementById("setTeacherName").value;
+            appState.settings.treasurerName = document.getElementById("setTreasurerName").value;
+            appState.settings.weeklyTarget = parseInt(document.getElementById("setWeeklyTarget").value);
+            saveData(); updateHeader(); alert("Identitas kelas tersimpan lokal.");
+        }
+
+        function saveDbSettings(e) {
+            e.preventDefault();
+            appState.apiConfig.provider = document.getElementById("setProvider").value;
+            appState.apiConfig.gasUrl = document.getElementById("setGasUrl").value.trim();
+            appState.apiConfig.appId = document.getElementById("setAppId").value.trim();
+            appState.apiConfig.apiKey = document.getElementById("setApiKey").value.trim();
+            appState.apiConfig.tableKas = document.getElementById("setTableKas").value.trim();
+            appState.apiConfig.tableExp = document.getElementById("setTableExp").value.trim();
+            saveData();
+            alert("Konfigurasi backend database tersimpan aman di perangkat.");
+        }
+
+        // --- GOOGLE APPS SCRIPT WEB APP INTEGRATION ---
+        async function initSheetsOnGAS() {
+            const gasUrl = appState.apiConfig.gasUrl;
+            if (!gasUrl) { alert("Harap isi Web App Exec URL terlebih dahulu!"); return; }
+
+            try {
+                const response = await fetch(gasUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: "INIT_SHEETS" })
+                });
+                const res = await response.json();
+                if (res.success) {
+                    alert("Sukses! Tab Kas_Harian, Pengeluaran_Kas, Master_Siswa, dan Settings berhasil dibuat di Google Sheets.");
+                } else {
+                    alert("Gagal menginisialisasi tab: " + res.error);
+                }
+            } catch (err) {
+                alert("Error koneksi ke Google Apps Script: " + err.message);
+            }
+        }
+
+        async function pullDataFromBackend() {
+            const provider = appState.apiConfig.provider || "gas";
+            if (provider === "gas" && !appState.apiConfig.gasUrl) {
+                alert("Konfigurasi Google Apps Script URL belum diisi di menu Setting!");
+                showSection('settings'); return;
+            }
+
+            if (!navigator.onLine) {
+                alert("Anda sedang Offline. Koneksi internet dibutuhkan untuk menarik data."); return;
+            }
+
+            const icon = document.getElementById("pullIcon");
+            icon.classList.add("animate-spin");
+
+            try {
+                if (provider === "gas") {
+                    const response = await fetch(`${appState.apiConfig.gasUrl}?action=PULL_ALL`);
+                    const res = await response.json();
+                    if (res.success && res.data) {
+                        if (res.data.students && res.data.students.length > 0) appState.students = res.data.students;
+                        if (res.data.kasRecords) appState.kasRecords = res.data.kasRecords;
+                        if (res.data.expenses) appState.expenses = res.data.expenses;
+                        if (res.data.settings) appState.settings = { ...appState.settings, ...res.data.settings };
+
+                        // Pastikan weeklyTarget selalu Number setelah pull
+                        appState.settings.weeklyTarget = parseInt(appState.settings.weeklyTarget) || 5000;
+
+                        saveData();
+                        populateSettingsForm(); // Refresh form fields dengan data baru dari backend
+                        renderAll();
+                        alert("Berhasil menarik seluruh data dari Google Sheets!");
+                    } else {
+                        alert("Gagal menarik data: " + (res.error || "Format respon tidak valid"));
+                    }
+                } else {
+                    alert("Fitur Pull Data otomatis direkomendasikan menggunakan Google Apps Script.");
+                }
+            } catch (err) {
+                console.error("Pull Data Error:", err);
+                alert("Gagal menarik data dari server: " + err.message);
+            } finally {
+                icon.classList.remove("animate-spin");
+            }
+        }
+
+        async function syncDataToBackend() {
+            const provider = appState.apiConfig.provider || "gas";
+
+            if (provider === "gas" && !appState.apiConfig.gasUrl) {
+                alert("Harap isi Web App Exec URL di menu Setting & Database terlebih dahulu!");
+                showSection('settings'); return;
+            }
+
+            if (provider === "appsheet" && (!appState.apiConfig.appId || !appState.apiConfig.apiKey)) {
+                alert("Harap isi App ID dan API Key AppSheet di menu Setting!");
+                showSection('settings'); return;
+            }
+
+            if (!navigator.onLine) {
+                alert("Anda sedang Offline. Tunggu koneksi internet pulih untuk melakukan sinkronisasi."); return;
+            }
+
+            const btnText = document.getElementById("syncStatusText");
+            const icon = document.getElementById("syncIcon");
+            btnText.textContent = "Menyinkronkan..."; icon.classList.add("animate-spin");
+
+            try {
+                // Prepare Unsynced Data
+                let kasRowsToSync = [];
+                let kasRefs = [];
+
+                Object.keys(appState.kasRecords).forEach(week => {
+                    Object.keys(appState.kasRecords[week]).forEach(student => {
+                        const rec = appState.kasRecords[week][student];
+                        if (!rec.synced) {
+                            kasRowsToSync.push({
+                                "ID_Kas": `${week}-${student}`,
+                                "Minggu_Ke": week,
+                                "Nama_Siswa": student,
+                                "Senin": rec.mon, "Selasa": rec.tue, "Rabu": rec.wed, "Kamis": rec.thu, "Jumat": rec.fri,
+                                "Total": rec.mon + rec.tue + rec.wed + rec.thu + rec.fri
+                            });
+                            kasRefs.push(rec);
+                        }
+                    });
+                });
+
+                let expRowsToSync = appState.expenses.filter(e => !e.synced).map(e => ({
+                    "ID_Pengeluaran": e.id,
+                    "Tanggal": e.date,
+                    "Keterangan": e.note,
+                    "Nominal": e.amount,
+                    "Kategori": e.category || "Lain-lain",
+                    "Tipe": e.type || (e.category && e.category.toLowerCase().includes("talangan") ? "talangan" : (e.category && e.category.toLowerCase().includes("pengembalian") ? "reimburse" : "expense"))
+                }));
+
+                if (provider === "gas") {
+                    // GOOGLE APPS SCRIPT BATCH PUSH
+                    const payload = {
+                        action: "SYNC_ALL",
+                        payload: {
+                            kasRows: kasRowsToSync,
+                            expenseRows: expRowsToSync,
+                            deletedExpenseIds: appState.deletedExpensesQueue,
+                            deletedStudentNames: appState.deletedStudentsQueue,
+                            students: appState.students,
+                            settings: appState.settings
+                        }
+                    };
+
+                    const response = await fetch(appState.apiConfig.gasUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const res = await response.json();
+                    if (res.success) {
+                        kasRefs.forEach(r => r.synced = true);
+                        appState.expenses.forEach(e => e.synced = true);
+                        appState.deletedExpensesQueue = [];
+                        appState.deletedStudentsQueue = [];
+                        saveData();
+                        btnText.textContent = "Data Sinkron (Cloud)";
+                        alert("Berhasil! Seluruh data Kas, Pengeluaran, & Master Siswa tersinkronisasi ke Google Sheets.");
+                    } else {
+                        throw new Error(res.error || "Gagal sinkronisasi backend GAS");
+                    }
+
+                } else {
+                    // APPSHEET REST API v2
+                    if (kasRowsToSync.length > 0) {
+                        await appSheetAPIRequest(appState.apiConfig.tableKas, "Edit", kasRowsToSync);
+                        kasRefs.forEach(r => r.synced = true);
+                    }
+                    if (expRowsToSync.length > 0) {
+                        await appSheetAPIRequest(appState.apiConfig.tableExp, "Add", expRowsToSync);
+                        appState.expenses.forEach(e => e.synced = true);
+                    }
+                    if (appState.deletedExpensesQueue.length > 0) {
+                        const delRows = appState.deletedExpensesQueue.map(id => ({ "ID_Pengeluaran": id }));
+                        await appSheetAPIRequest(appState.apiConfig.tableExp, "Delete", delRows);
+                        appState.deletedExpensesQueue = [];
+                    }
+                    saveData();
+                    btnText.textContent = "Data Sinkron (AppSheet)";
+                    alert("Berhasil! Data tersimpan di AppSheet.");
+                }
+            } catch (error) {
+                console.error("Sync Error:", error);
+                btnText.textContent = "Gagal Sync";
+                alert("Sinkronisasi gagal. Error: " + error.message);
+            } finally {
+                icon.classList.remove("animate-spin");
+                setTimeout(() => { btnText.textContent = "Sync ke Database"; }, 3000);
+            }
+        }
+
+        async function appSheetAPIRequest(tableName, action, rows) {
+            const { appId, apiKey } = appState.apiConfig;
+            if (!appId || !apiKey) throw new Error("Kredensial AppSheet belum dikonfigurasi.");
+
+            const url = `https://www.appsheet.com/api/v2/apps/${appId}/tables/${tableName}/Action`;
+            const payload = { Action: action, Properties: { Locale: "id-ID" }, Rows: rows };
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'ApplicationAccessKey': apiKey, 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errDetail = await response.text();
+                throw new Error(`HTTP ${response.status}: ${errDetail}`);
+            }
+            return await response.json();
+        }
+
+        // --- EXPORT & BACKUP ---
+        function exportCSV() {
+            let csv = "No,Nama Siswa,Total Setoran Kas\n";
+            appState.students.forEach((st, i) => {
+                let tot = 0; Object.values(appState.kasRecords).forEach(w => { if (w[st]) tot += (w[st].mon || 0) + (w[st].tue || 0) + (w[st].wed || 0) + (w[st].thu || 0) + (w[st].fri || 0); });
+                csv += `${i + 1},"${st}",${tot}\n`;
+            });
+            csv += "\nRiwayat Pengeluaran\nNo,Tanggal,Keterangan,Nominal\n";
+            appState.expenses.forEach((e, i) => {
+                csv += `${i + 1},${e.date},"${e.note.replace(/"/g, '""')}",${e.amount}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Laporan_Kas_${appState.settings.className}.csv`;
+            a.click();
+        }
+
+        function exportJSONBackup() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
+            const a = document.createElement('a'); a.href = dataStr; a.download = `KasKelas_Backup_${appState.settings.className}.json`;
+            a.click();
+        }
+
+        // --- UTILS & PWA INSTALLATION SYSTEM ---
+        function escapeHtml(s) { return String(s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m])); }
+        function escapeJs(s) { return String(s).replace(/'/g, "\\'"); }
+
+        let deferredPrompt = null;
+
+        // PWA Install Event Listener
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const banner = document.getElementById('pwaInstallBanner');
+            if (banner && sessionStorage.getItem('pwa_banner_dismissed') !== 'true') {
+                banner.classList.remove('hidden');
+            }
+            const btnHeader = document.getElementById('btnInstallHeader');
+            if (btnHeader) btnHeader.classList.remove('hidden');
+        });
+
+        window.addEventListener('appinstalled', () => {
+            deferredPrompt = null;
+            const banner = document.getElementById('pwaInstallBanner');
+            if (banner) banner.classList.add('hidden');
+            const btnHeader = document.getElementById('btnInstallHeader');
+            if (btnHeader) btnHeader.classList.add('hidden');
+            console.log('KasKelas PWA berhasil diinstall di perangkat!');
+        });
+
+        async function triggerPwaInstall() {
+            const isIos = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+            if (isIos) {
+                document.getElementById('modalIosInstall').classList.remove('hidden');
+                lucide.createIcons();
+                return;
+            }
+
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    console.log('Pengguna menerima instalasi PWA');
+                }
+                deferredPrompt = null;
+            } else {
+                // Jika sudah standalone / browser tidak mendukung event otomatis
+                if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+                    alert('Aplikasi KasKelas sudah terpasang di Layar Utama HP Anda.');
+                } else {
+                    alert('Untuk memasang di HP Android:\n1. Tekan tombol menu titik tiga (⋮) di kanan atas Google Chrome.\n2. Pilih "Tambahkan ke Layar Utama" atau "Install Aplikasi".');
+                }
+            }
+        }
+
+        function closeIosModal() {
+            document.getElementById('modalIosInstall').classList.add('hidden');
+        }
+
+        function dismissInstallBanner() {
+            const banner = document.getElementById('pwaInstallBanner');
+            if (banner) banner.classList.add('hidden');
+            sessionStorage.setItem('pwa_banner_dismissed', 'true');
+        }
+
+        function filterGuideCategory(cat) {
+            // Update button styles
+            document.querySelectorAll('.guide-filter-btn').forEach(btn => {
+                const btnCat = btn.getAttribute('data-cat');
+                if (btnCat === cat) {
+                    btn.className = 'guide-filter-btn px-3 py-1.5 rounded-lg bg-white text-slate-900 font-bold shadow-xs transition-all';
+                } else {
+                    btn.className = 'guide-filter-btn px-3 py-1.5 rounded-lg bg-white/10 text-white/80 font-medium hover:bg-white/20 transition-all';
+                }
+            });
+
+            // Filter guide cards
+            document.querySelectorAll('.guide-card').forEach(card => {
+                const cardCat = card.getAttribute('data-category');
+                if (cat === 'all' || cardCat === cat || cardCat === 'all') {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+            lucide.createIcons();
+        }
+
+        async function copyCodeGsScript() {
+            try {
+                const res = await fetch('/Code.gs');
+                let codeText = '';
+                if (res.ok) {
+                    codeText = await res.text();
+                } else {
+                    codeText = `// Silakan ambil file Code.gs dari repositori aplikasi KasKelas`;
+                }
+                await navigator.clipboard.writeText(codeText);
+                alert('Berhasil! Seluruh kode script backend Code.gs telah disalin ke clipboard Anda. Silakan tempel di Google Apps Script.');
+            } catch (err) {
+                console.warn('Gagal salin via fetch:', err);
+                alert('Silakan buka file Code.gs untuk menyalin script.');
+            }
+        }
+
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/sw.js')
+                        .then(reg => {
+                            console.log('KasKelas Service Worker terdaftar dengan sukses. Scope:', reg.scope);
+                        })
+                        .catch(err => {
+                            console.warn('Service Worker registration failed:', err);
+                        });
+                });
+            }
+        }
+    </script>
+</body>
+
+</html>

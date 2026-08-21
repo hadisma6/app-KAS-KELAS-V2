@@ -1,0 +1,14 @@
+{
+  "name": "kaskelas",
+  "version": "1.0.0",
+  "description": "Aplikasi Rekap Kas Keuangan Siswa Kelas - PWA Offline First",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "build": "echo 'Build complete'",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
