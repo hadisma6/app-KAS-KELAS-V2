@@ -1,29 +1,49 @@
-# 📱 KasKelas - Rekap Keuangan Kas Kelas (PWA + AppSheet API v2)
+# 📱 KasKelas (H2i) - Rekap Kas Siswa & Talangan LKPD (PWA Offline-First)
 
-Aplikasi **KasKelas** adalah web app Progressive Web Application (PWA) berorientasi *Offline-First* yang terintegrasi dengan Google Sheets melalui **AppSheet REST API v2**.
-
----
-
-## 🌟 Fitur Utama
-
-- **Offline-First Storage**: Menggunakan `localStorage` browser sehingga tetap dapat mencatat kas & pengeluaran tanpa jaringan internet.
-- **Dynamic Data Flattening**: Mengubah matriks kas mingguan (Nama Siswa vs Hari Senin-Jumat) menjadi format baris terstruktur untuk AppSheet.
-- **Batch Push / Upsert**: Menggunakan composite key `ID_Kas = {Minggu_Ke}-{Nama_Siswa}` dengan metode HTTP `Edit` (upsert) untuk memperbarui atau menambah data tanpa duplikasi.
-- **Keamanan Kredensial (Method 1: User Input)**: Kredensial `App ID` dan `Access Key` disimpan secara aman di perangkat lokal pengguna dan dikirim langsung ke endpoint resmi Google AppSheet.
-- **Laporan & Export**: Mendukung cetak PDF laporan kas dan ekspor CSV.
+Aplikasi **KasKelas** adalah web app Progressive Web Application (PWA) berorientasi *Offline-First* yang terintegrasi langsung dengan Google Sheets melalui **Google Apps Script (Web App URL)** dan **AppSheet REST API v2**.
 
 ---
 
-## 📁 Struktur Repositori
+## 🌟 Fitur Unggulan
 
-- `index.html` - Aplikasi utama (Single-File Complete App).
-- `SECURITY.md` - Dokumentasi dan analisis keamanan koneksi API.
-- `DEPLOYMENT.md` - Panduan deployment cepat ke GitHub Pages.
-- `aplikasi_kas_keuangan_kelas_pwa_appsheet_api_integrated.html` - File master cadangan.
+- **Offline-First & PWA Installable**: Dapat diinstal langsung ke layar utama HP Android (Chrome), iOS (Safari), maupun Laptop/PC tanpa melalui Play Store. Tetap dapat digunakan saat tanpa koneksi internet.
+- **Pencatatan Kas Harian & Lunas Mingguan**: Memudahkan bendahara mencatat setoran harian (Senin–Jumat) serta tombol instan pelunasan mingguan.
+- **Sistem Talangan LKPD & Cicilan Pengembalian**: Mendukung pemisahan jenis transaksi:
+  - 🔴 Belanja Operasional Kelas
+  - 🟡 Dana Talangan Kelas (LKPD, Buku, Seragam)
+  - 🟢 Pengembalian/Cicilan Talangan Siswa
+- **SOP 2 Bendahara (Anti-Konflik / Smart Merge)**: Sistem sinkronisasi batch aman yang mencegah timpa data antar bendahara.
+- **Buku Panduan Interaktif Lengkap**: Tab panduan lengkap langsung di dalam aplikasi (Bab 1 s.d. Bab 7).
+- **Laporan Resmi & Cetak PDF**: Format neraca pertanggungjawaban lengkap yang siap ditandatangani Wali Kelas dan Bendahara.
+- **Google Sheets Backend (`Code.gs`)**: Database mandiri dan gratis menggunakan Google Apps Script.
 
 ---
 
-## 🚀 Panduan Penggunaan
-1. Buka `index.html` di browser web atau deploy ke GitHub Pages (lihat [DEPLOYMENT.md](file:///c:/Users/MIA/Downloads/kas/DEPLOYMENT.md)).
-2. Buka menu **Setting & Database** untuk mengonfigurasi `App ID` dan `Access Key` AppSheet.
-3. Mulai input kas dan klik **Sync ke Database** ketika terhubung ke internet.
+## 📁 Struktur File Proyek
+
+- `index.html` - Aplikasi antarmuka utama (PWA, Tailwind CSS, Lucide Icons, jsPDF).
+- `manifest.json` - Konfigurasi Web App Manifest PWA (ikon, nama, tema, orientasi).
+- `sw.js` - Service Worker untuk caching offline dan PWA handler.
+- `server.js` - Web server Node.js dengan penanganan MIME-type PWA.
+- `Code.gs` - Script Google Apps Script untuk backend Google Sheets (CRUD & Sync).
+- `icon.svg`, `icon-192.png`, `icon-512.png` - Ikon branding aplikasi resmi H2i.
+- `DEPLOYMENT.md` - Panduan deployment ke GitHub Pages / Vercel / Cloud Run.
+- `SECURITY.md` - Panduan keamanan data dan API.
+
+---
+
+## 🚀 Cara Menghubungkan ke GitHub & Deployment
+
+### 1. Hubungkan ke Repositori GitHub Anda:
+```bash
+git init
+git add .
+git commit -m "feat: upgrade KasKelas PWA dengan sistem talangan LKPD & panduan interaktif"
+git branch -M main
+git remote add origin https://github.com/USERNAME_ANDA/NAMA_REPO_ANDA.git
+git push -u origin main
+```
+
+### 2. Export Langsung dari Google AI Studio:
+Anda dapat mengekspor atau menghubungkan repositori ini secara otomatis melalui menu **Settings (ikon gerigi) / Export** di Google AI Studio Build $\rightarrow$ pilih **Export to GitHub** atau **Download ZIP**.
+
