@@ -1,10 +1,12 @@
-const CACHE_NAME = 'kaskelas-pwa-v2.4';
+const CACHE_NAME = 'kaskelas-pwa-v2.6';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
   '/favicon.ico',
   '/favicon.png',
+  '/favicon-32x32.png',
+  '/favicon-16x16.png',
   '/icon-192.png',
   '/icon-512.png',
   '/icon.svg',

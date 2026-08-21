@@ -1,31 +1,67 @@
-<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <!-- Gradient untuk memberikan efek modern pada background -->
-    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#60a5fa"/> <!-- Lighter Blue -->
-      <stop offset="100%" stop-color="#1e40af"/> <!-- Darker Blue -->
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="60" y1="40" x2="450" y2="480" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#29b6f6"/>
+      <stop offset="25%" stop-color="#0288d1"/>
+      <stop offset="65%" stop-color="#0256a8"/>
+      <stop offset="100%" stop-color="#072d6b"/>
     </linearGradient>
+
+    <!-- Top Highlight -->
+    <radialGradient id="topGlow" cx="200" cy="80" r="280" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Outer Ring Gradient -->
+    <linearGradient id="ringGrad" x1="330" y1="90" x2="410" y2="170" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+
+    <!-- Orange Dot Gradient -->
+    <linearGradient id="orangeGrad" x1="355" y1="110" x2="385" y2="150" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fb923c"/>
+      <stop offset="100%" stop-color="#ea580c"/>
+    </linearGradient>
+
+    <!-- Soft Drop Shadow Filter for Text -->
+    <filter id="textShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#031b4e" flood-opacity="0.35"/>
+    </filter>
+
+    <!-- Squircle Shadow -->
+    <filter id="iconShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#02102e" flood-opacity="0.4"/>
+    </filter>
   </defs>
 
-  <!-- Background Rounded Rectangle -->
-  <rect x="0" y="0" width="512" height="512" rx="120" ry="120" fill="#2563eb"/>
-  
-  <!-- Overlay Gradient for Depth (Optional) -->
-  <rect x="0" y="0" width="512" height="512" rx="120" ry="120" fill="url(#grad)" opacity="0.3"/>
+  <!-- Base Icon Squircle (App Icon Body) -->
+  <rect x="24" y="24" width="464" height="464" rx="108" ry="108" fill="url(#bgGrad)" filter="url(#iconShadow)"/>
 
-  <!-- Text H2i -->
-  <text x="50%" y="55%" 
-        font-family="'Segoe UI', Roboto, sans-serif" 
-        font-weight="900" 
-        font-size="240" 
-        fill="#ffffff" 
-        text-anchor="middle" 
-        dominant-baseline="middle"
-        letter-spacing="-8"
-        style="text-shadow: 4px 4px 10px rgba(0,0,0,0.2);">
-    H2i
-  </text>
+  <!-- Top Ambient Highlight Reflection -->
+  <rect x="24" y="24" width="464" height="464" rx="108" ry="108" fill="url(#topGlow)"/>
 
-  <!-- Aksen Dot (Orange - seperti notifikasi/status aktif) -->
-  <circle cx="390" cy="120" r="35" fill="#f59e0b" stroke="#2563eb" stroke-width="10"/>
+  <!-- Subtle Bevel Border -->
+  <rect x="24.5" y="24.5" width="463" height="463" rx="107.5" ry="107.5" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.25"/>
+
+  <!-- Top Right Indicator Ring -->
+  <circle cx="365" cy="140" r="28" fill="none" stroke="url(#ringGrad)" stroke-width="7"/>
+
+  <!-- Top Right Indicator Orange Dot -->
+  <circle cx="365" cy="140" r="19" fill="url(#orangeGrad)"/>
+
+  <!-- Main Typography "H2i" -->
+  <g filter="url(#textShadow)">
+    <text x="250" y="315"
+          font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+          font-size="160"
+          font-weight="900"
+          letter-spacing="-6"
+          fill="#ffffff"
+          text-anchor="middle">
+      H2i
+    </text>
+  </g>
 </svg>
