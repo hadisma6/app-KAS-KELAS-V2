@@ -2,41 +2,41 @@
   "name": "KasKelas - Rekap Keuangan & Kas Siswa",
   "short_name": "KasKelas",
   "description": "Aplikasi Rekap Kas & Talangan Keuangan Siswa Kelas - Offline First PWA dengan Sinkronisasi Google Sheets",
-  "start_url": "/",
-  "id": "/",
+  "start_url": "./",
+  "id": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#f8fafc",
   "theme_color": "#2563eb",
-  "scope": "/",
+  "scope": "./",
   "lang": "id",
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "./icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-192.png",
+      "src": "./icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icon-512.png",
+      "src": "./icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-512.png",
+      "src": "./icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icon.svg",
+      "src": "./icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
@@ -46,17 +46,17 @@
   "shortcuts": [
     {
       "name": "Input Kas",
-      "url": "/#input-kas",
+      "url": "./#input-kas",
       "description": "Buka form input kas harian siswa"
     },
     {
       "name": "Catat Pengeluaran",
-      "url": "/#pengeluaran",
+      "url": "./#pengeluaran",
       "description": "Buka pencatatan belanja & talangan LKPD"
     },
     {
       "name": "Laporan & PDF",
-      "url": "/#rekap",
+      "url": "./#rekap",
       "description": "Lihat rekapitulasi & cetak laporan"
     }
   ]

@@ -1,15 +1,15 @@
-const CACHE_NAME = 'kaskelas-pwa-v2.7';
+const CACHE_NAME = 'kaskelas-pwa-v2.8';
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/favicon.ico',
-  '/favicon.png',
-  '/favicon-32x32.png',
-  '/favicon-16x16.png',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/icon.svg',
+  './',
+  './index.html',
+  './manifest.json',
+  './favicon.ico',
+  './favicon.png',
+  './favicon-32x32.png',
+  './favicon-16x16.png',
+  './icon-192.png',
+  './icon-512.png',
+  './icon.svg',
   'https://cdn.tailwindcss.com',
   'https://unpkg.com/lucide@latest',
   'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap'

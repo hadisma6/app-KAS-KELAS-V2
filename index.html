@@ -10,22 +10,22 @@
     <title>KasKelas - Rekap Keuangan Kelas PWA</title>
 
     <!-- PWA Web App Manifest -->
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="./manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="KasKelas">
 
-    <!-- Favicon and Apple Device Icons -->
-    <link rel="shortcut icon" href="/favicon.ico">
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
-    <link rel="icon" type="image/svg+xml" href="/icon.svg">
-    <link rel="apple-touch-icon" href="/icon-192.png">
-    <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png">
+    <!-- Favicon and Apple Device Icons (Relative Path for Local file:// and Web Host Compatibility) -->
+    <link rel="shortcut icon" href="./favicon.ico">
+    <link rel="icon" type="image/x-icon" href="./favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
+    <link rel="icon" type="image/svg+xml" href="./icon.svg">
+    <link rel="apple-touch-icon" href="./icon-192.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="./icon-512.png">
 
     <!-- Tailwind CSS CDN for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -1981,7 +1981,7 @@
 
         async function copyCodeGsScript() {
             try {
-                const res = await fetch('/Code.gs');
+                const res = await fetch('./Code.gs');
                 let codeText = '';
                 if (res.ok) {
                     codeText = await res.text();
@@ -1997,9 +1997,9 @@
         }
 
         function registerServiceWorker() {
-            if ('serviceWorker' in navigator) {
+            if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
                 window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('/sw.js')
+                    navigator.serviceWorker.register('./sw.js')
                         .then(reg => {
                             console.log('KasKelas Service Worker terdaftar dengan sukses. Scope:', reg.scope);
                         })
