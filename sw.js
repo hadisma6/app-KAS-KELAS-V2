@@ -1,8 +1,12 @@
-const CACHE_NAME = 'kaskelas-pwa-v2.2';
+const CACHE_NAME = 'kaskelas-pwa-v2.4';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/favicon.ico',
+  '/favicon.png',
+  '/icon-192.png',
+  '/icon-512.png',
   '/icon.svg',
   'https://cdn.tailwindcss.com',
   'https://unpkg.com/lucide@latest',

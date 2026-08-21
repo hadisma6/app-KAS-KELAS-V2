@@ -17,8 +17,12 @@
     <meta name="apple-mobile-web-app-title" content="KasKelas">
 
     <!-- Favicon and Apple Device Icons -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
     <link rel="icon" type="image/svg+xml" href="/icon.svg">
-    <link rel="apple-touch-icon" href="/icon.svg">
+    <link rel="apple-touch-icon" href="/icon-192.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png">
 
     <!-- Tailwind CSS CDN for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -86,8 +90,19 @@
     <header class="bg-brand-600 text-white shadow-lg sticky top-0 z-40 no-print">
         <div class="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
             <div class="flex items-center space-x-3">
-                <div class="bg-white/20 p-1 rounded-xl flex items-center justify-center shadow-xs">
-                    <img src="/icon.svg" alt="H2i Logo" class="w-7 h-7 object-contain rounded-lg">
+                <div class="p-0.5 rounded-xl flex items-center justify-center shadow-xs">
+                    <svg class="w-8 h-8 rounded-lg shadow-sm" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#60a5fa"/>
+                                <stop offset="100%" stop-color="#1e40af"/>
+                            </linearGradient>
+                        </defs>
+                        <rect x="0" y="0" width="512" height="512" rx="120" ry="120" fill="#2563eb"/>
+                        <rect x="0" y="0" width="512" height="512" rx="120" ry="120" fill="url(#headerGrad)" opacity="0.3"/>
+                        <text x="50%" y="55%" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="240" fill="#ffffff" text-anchor="middle" dominant-baseline="middle" letter-spacing="-8">H2i</text>
+                        <circle cx="390" cy="120" r="35" fill="#f59e0b" stroke="#2563eb" stroke-width="10"/>
+                    </svg>
                 </div>
                 <div>
                     <h1 class="font-bold text-lg leading-tight" id="headerAppTitle">Kas Keuangan Kelas</h1>
