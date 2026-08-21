@@ -1,9 +1,0 @@
-{
-  "name": "kaskelas",
-  "version": "1.0.0",
-  "description": "Aplikasi Rekap Kas Keuangan Siswa Kelas - PWA Offline First",
-  "type": "module",
-  "scripts": {
-    "build": "echo 'Build complete'"
-  }
-}
