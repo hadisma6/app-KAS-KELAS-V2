@@ -16,16 +16,16 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="KasKelas">
 
-    <!-- Favicon and Apple Device Icons (Relative Path for Local file:// and Web Host Compatibility) -->
-    <link rel="shortcut icon" href="./favicon.ico">
-    <link rel="icon" type="image/x-icon" href="./favicon.ico">
-    <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
-    <link rel="icon" type="image/svg+xml" href="./icon.svg">
-    <link rel="apple-touch-icon" href="./icon-192.png">
-    <link rel="apple-touch-icon" sizes="512x512" href="./icon-512.png">
+    <!-- Favicon and Apple Device Icons -->
+    <link rel="shortcut icon" href="./favicon.ico?v=3">
+    <link rel="icon" type="image/x-icon" href="./favicon.ico?v=3">
+    <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png?v=3">
+    <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.png?v=3">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png?v=3">
+    <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png?v=3">
+    <link rel="icon" type="image/svg+xml" href="./icon.svg?v=3">
+    <link rel="apple-touch-icon" href="./icon-192.png?v=3">
+    <link rel="apple-touch-icon" sizes="512x512" href="./icon-512.png?v=3">
 
     <!-- Tailwind CSS CDN for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -1997,7 +1997,7 @@
         }
 
         function registerServiceWorker() {
-            if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+            if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
                     navigator.serviceWorker.register('./sw.js')
                         .then(reg => {
