@@ -4,12 +4,6 @@
   "description": "Aplikasi Rekap Kas Keuangan Siswa Kelas - PWA Offline First",
   "type": "module",
   "scripts": {
-    "dev": "node server.js",
-    "build": "echo 'Build complete'",
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "express": "^4.21.2",
-    "sharp": "^0.35.3"
+    "build": "echo 'Build complete'"
   }
 }
